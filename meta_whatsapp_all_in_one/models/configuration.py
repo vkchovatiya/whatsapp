@@ -57,13 +57,13 @@ class WhatsAppConfig(models.Model):
         help="Status of the WhatsApp configuration"
     )
     webhook_url = fields.Char(
-        string="Webhook URL",
+        string="Your Webhook URL",
         readonly=True,
         compute="_compute_webhook_url",
         help="Webhook URL for receiving WhatsApp messages"
     )
     webhook_token = fields.Char(
-        string="Webhook Token",
+        string="Your Webhook Token",
         readonly=True,
         default=lambda self: self._generate_webhook_token(),
         help="Token for verifying Meta webhook requests"
