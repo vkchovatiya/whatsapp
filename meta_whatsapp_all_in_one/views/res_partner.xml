@@ -1,0 +1,44 @@
+<odoo>
+
+    <record id="action_view_history" model="ir.actions.act_window">
+        <field name="name">Message History</field>
+        <field name="res_model">whatsapp.message.history</field>
+        <field name="view_mode">list,form</field>
+        <field name="domain">[('partner_id', '=', active_id)]</field>
+    </record>
+     <record id="view_partner_configuration_form_whatsapp" model="ir.ui.view">
+        <field name="name">res.partner.form.inherit</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_form"/>
+        <field name="arch" type="xml">
+           <div name="button_box" position="inside">
+                    <button class="oe_stat_button" type="action" name="%(action_view_history)d" icon="fa-whatsapp"><div>Message History</div>
+                    </button>
+                </div>
+            <xpath expr="//sheet" position="before">
+                <header>
+                    <button name="action_send_message"
+                            type="object"
+                            class="btn btn-icon"
+                            icon="fa-whatsapp"
+                            string="Send"
+                            />
+                </header>
+            </xpath>
+        </field>
+    </record>
+    <record id="view_users_form_inherit_whatsapp" model="ir.ui.view">
+        <field name="name">res.users.form.inherit.whatsapp</field>
+        <field name="model">res.users</field>
+        <field name="inherit_id" ref="base.view_users_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='login']" position="after">
+                 <label for="allowed_providers" string="Allowed Providers"/>
+                    <field name="allowed_providers" widget="many2many_tags"/>
+                 <label for="default_provider" string="Default Provider"/>
+                    <field name="default_provider"/>
+
+            </xpath>
+        </field>
+    </record>
+</odoo>

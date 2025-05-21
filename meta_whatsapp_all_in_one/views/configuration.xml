@@ -1,0 +1,114 @@
+<odoo>
+    <record id="view_whatsapp_config_form" model="ir.ui.view">
+    <field name="name">whatsapp.config.form</field>
+    <field name="model">whatsapp.config</field>
+    <field name="arch" type="xml">
+        <form string="WhatsApp Configuration">
+            <header>
+                <field name="state" widget="statusbar"/>
+            </header>
+            <sheet>
+
+                <group>
+                    <field name="name"/>
+                    <field name="api_url"/>
+                    <field name="instance_id"/>
+                    <field name="business_account_id"/>
+                    <field name="access_token" password="True"/>
+                    <field name="app_id"/>
+                </group>
+                <group>
+                    <field name="webhook_url" readonly="1"/>
+                    <field name="webhook_token" readonly="1"/>
+                </group>
+                <div style="display: flex; gap: 10px;">
+                    <button name="action_verify_configuration" type="object" string="Verify Configuration" class="oe_highlight"/>
+                    <button name="action_reset_to_draft" type="object" string="Reset to Draft" class="oe_highlight"/>
+                    <button name="action_regenerate_webhook_token" type="object" string="Regenerate Webhook Token" class="oe_highlight"/>
+                    <button name="get_message_template" type="object" string="Fetch Templates" class="oe_highlight"/>
+                </div>
+                <notebook>
+                    <page string="Business Details">
+                        <group>
+                            <group>
+                                <field name="business_address"/>
+                                <field name="business_description"/>
+                                <field name="business_vertical"/>
+                            </group>
+                            <group>
+                                <field name="business_about"/>
+                                <field name="business_email"/>
+                                <field name="business_websites"/>
+                            </group>
+                        </group>
+                        <button name="get_business_profile" type="object" string="Get Business Profile" class="oe_highlight"/>
+                    </page>
+                    <!-- Operators Tab -->
+                    <page string="Operators">
+                        <group>
+                            <field name="operator_ids"  nolabel="1">
+                                <kanban>
+                                <field name="name"/>
+                                <field name="image_1920"/>
+                                <field name="email"/>
+                                <templates>
+                                    <t t-name="kanban-box">
+                                         <field name="image_1920" widget="image" class="oe_kanban_image" options="{'size': [64, 64]}"/>
+                                        <div>
+
+                                            <div class="oe_kanban_details">
+                                                <strong><field name="name"/></strong>
+
+
+                                            </div>
+                                        </div>
+                                    </t>
+                                </templates>
+                            </kanban>
+                            </field>
+                        </group>
+                    </page>
+
+                    <!-- Phone Number Details Tab -->
+                    <page string="Phone Number Details">
+                        <group><group>
+                            <field name="verified_name"/>
+                            <field name="code_verification_status"/>
+                            <field name="display_phone_number"/> </group><group>
+                            <field name="quality_rating"/>
+                            <field name="platform_type"/>
+                            <field name="throughput_level"/>
+                        </group>
+                        </group>
+                        <button name="get_phone_number_details" type="object" string="Get Phone Number Details" class="oe_highlight"/>
+                    </page>
+                </notebook>
+
+            </sheet>
+        </form>
+    </field>
+</record>
+    <record id="view_whatsapp_config_list" model="ir.ui.view">
+        <field name="name">whatsapp.config.list</field>
+        <field name="model">whatsapp.config</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="name"/>
+                <field name="instance_id"/>
+                <field name="business_account_id"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="action_whatsapp_config" model="ir.actions.act_window">
+        <field name="name">WhatsApp Accounts</field>
+        <field name="res_model">whatsapp.config</field>
+        <field name="view_mode">list,form</field>
+    </record>
+    <menuitem id="menu_whatsapp_connector" name="WhatsApp Connector" web_icon="meta_whatsapp_all_in_one,static/description/icon.png" />
+    <menuitem id="menu_whatsapp_config" name="Configuration"
+              parent="menu_whatsapp_connector" sequence="1"/>
+        <menuitem id="menu_whatsapp_accounts" name="Accounts"
+              parent="menu_whatsapp_config" action ='action_whatsapp_config' sequence="1"/>
+
+</odoo>

@@ -1,0 +1,73 @@
+<odoo>
+    <!-- list View -->
+    <record id="view_whatsapp_message_history_list" model="ir.ui.view">
+        <field name="name">whatsapp.message.history.list</field>
+        <field name="model">whatsapp.message.history</field>
+        <field name="arch" type="xml">
+            <list string="WhatsApp Message History">
+                <field name="number"/>
+                <field name="partner_id"/>
+                <field name="user"/>
+                <field name="message"/>
+                <field name="config_id"/>
+                <field name="template_id"/>
+                <field name="send_date"/>
+                <field name="status" />
+            </list>
+        </field>
+    </record>
+
+    <!-- Form View -->
+    <record id="view_whatsapp_message_history_form" model="ir.ui.view">
+        <field name="name">whatsapp.message.history.form</field>
+        <field name="model">whatsapp.message.history</field>
+        <field name="arch" type="xml">
+            <form string="WhatsApp Message History">
+                <sheet>
+                    <group>
+                        <group string="Recipient Details">
+                            <field name="number"/>
+                            <field name="partner_id"/>
+                        </group>
+                        <group string="Sender Details">
+                            <field name="user"/>
+                            <field name="config_id" options="{'no_create': True}"/>
+                        </group>
+                    </group>
+                    <group>
+                        <group string="Message Content">
+                            <field name="message" widget="text" style="height: 100px; width: 100%;"/>
+                            <field name="template_id" options="{'no_create': True}"/>
+                        </group>
+                        <group string="Attachment">
+                            <field name="attachment" widget="binary" filename="attachment_filename"/>
+                            <field name="attachment_filename"/>
+                        </group>
+                    </group>
+                    <group>
+                        <group string="Status">
+                            <field name="send_date"/>
+                            <field name="status"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Action -->
+    <record id="action_whatsapp_message_history" model="ir.actions.act_window">
+        <field name="name">WhatsApp Message History</field>
+        <field name="res_model">whatsapp.message.history</field>
+        <field name="view_mode">list,form</field>
+        <field name="view_id" ref="view_whatsapp_message_history_list"/>
+    </record>
+
+    <!-- Menu -->
+    <menuitem
+        id="menu_whatsapp_message_history"
+        name="Message History"
+        parent="menu_whatsapp_connector"
+        action="action_whatsapp_message_history"
+        sequence="40"/>
+</odoo>

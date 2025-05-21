@@ -1,0 +1,74 @@
+<odoo>
+    <record id="view_whatsapp_template_list" model="ir.ui.view">
+        <field name="name">whatsapp.template.list</field>
+        <field name="model">whatsapp.template</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="name"/>
+                <field name="category"/>
+                <field name="status"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_whatsapp_template_form" model="ir.ui.view">
+    <field name="name">whatsapp.template.form</field>
+    <field name="model">whatsapp.template</field>
+    <field name="arch" type="xml">
+        <form string="WhatsApp Template">
+            <field name="add_status" invisible='1'/>
+            <header>
+            <button name="action_resubmit_template" type="object"  string="Resubmit Template" class="oe_highlight"/>
+            <button name="action_create_template" type="object"  string="Add Template" class="oe_highlight"/>
+            <button name="action_get_status" type="object" string="Get Status" class="oe_highlight"/>
+            <button name="action_remove_template" type="object" string="Remove Template"
+            class="oe_highlight" confirm="Are you sure you want to remove this template? This action cannot be undone."/>
+</header>
+            <sheet>
+                <group>
+                    <field name="name"/>
+                    <field name="template_id"/>
+
+                    <field name="lang" widget="many2one"/>
+                    <field name="category"/>
+                    <field name="status"/>
+                    <field name="parameter_format"/>
+                    <field name="config_id"/>
+                    <field name="available"/>
+                </group>
+                <notebook>
+                    <page string="Message">
+                        <group>
+                            <field name="message" nolabel="1" placeholder="Enter the message content here..."/>
+                        </group>
+                    </page>
+                    <page string="Components">
+                        <group>
+                            <field name="component_ids" widget="one2many_list">
+                                <list>
+                                    <field name="type"/>
+                                    <field name="format" invisible="type !='HEADER'" />
+                                    <field name="text"/>
+                                    <field name="parameter_ids" widget="one2many_list"  >
+                                        <list>
+                                            <field name="fieldd" />
+                                        </list>
+                                    </field>
+                                </list>
+                            </field>
+                        </group>
+                    </page>
+                </notebook>
+            </sheet>
+        </form>
+    </field>
+</record>
+
+    <record id="action_whatsapp_template" model="ir.actions.act_window">
+        <field name="name">WhatsApp Templates</field>
+        <field name="res_model">whatsapp.template</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <menuitem id="menu_whatsapp_template" name="Templates" parent="menu_whatsapp_connector" action="action_whatsapp_template"/>
+</odoo>
