@@ -2,3 +2,5 @@
 # Part of Creyox Technologies.
 
 from . import whatsapp_config
+from . import whatsapp_messaging_lists
+from . import whatsapp_messaging_lists_contacts

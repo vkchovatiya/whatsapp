@@ -1,2 +1,4 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
 access_whatsapp_marketing_campaign,access_whatsapp_marketing_campaign,model_whatsapp_marketing_campaign,,1,1,1,1
+access_whatsapp_messaging_lists,access_whatsapp_messaging_lists,model_whatsapp_messaging_lists,,1,1,1,1
+access_whatsapp_messaging_lists_contacts,access_whatsapp_messaging_lists_contacts,model_whatsapp_messaging_lists_contacts,,1,1,1,1

@@ -9,4 +9,6 @@
               action="action_whatsapp_marketing"/>
     <menuitem id="menu_whatsapp_messaging_lists" name="WhatsApp Messaging Lists" sequence="2"
               action="action_whatsapp_marketing" parent="menu_whatsapp_marketing"/>
+    <menuitem id="menu_whatsapp_messaging_lists_contact" name="WhatsApp Messaging Lists Contacts" sequence="2"
+              action="action_whatsapp_marketing" parent="menu_whatsapp_messaging_lists"/>
 </odoo>
