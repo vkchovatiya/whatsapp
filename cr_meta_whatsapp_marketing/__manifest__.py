@@ -1,0 +1,25 @@
+# -*- coding: utf-8 -*-
+# Part of Creyox Technologies.
+{
+    'name': 'WhatsApp Marketing',
+    'version': '18.0',
+    'category': 'Marketing',
+    'summary': 'Manage WhatsApp marketing campaigns in Odoo 18',
+    'description': """
+        A module to create and manage WhatsApp marketing campaigns,
+        including contact segmentation, template-based messaging,
+        and analytics, integrated with the Meta WhatsApp Business API.
+    """,
+    'depends': ['meta_whatsapp_all_in_one','mail', 'contacts'],
+    'data': [
+        'security/ir.model.access.csv',
+        # 'views/whatsapp_marketing_campaign_views.xml',
+        # 'views/res_partner_views.xml',
+        # 'views/whatsapp_marketing_dashboard.xml',
+        # 'data/whatsapp_marketing_data.xml',
+        'views/whatsapp_menus.xml',
+        'views/whatsapp_config_view.xml',
+    ],
+    'installable': True,
+    'application': True,
+}

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo>
+    <record id="action_whatsapp_marketing" model="ir.actions.act_window">
+        <field name="name">WhatsApp Marketing</field>
+        <field name="res_model">whatsapp.marketing.campaign</field>
+        <field name="view_mode">list,form</field>
+    </record>
+    <menuitem id="menu_whatsapp_marketing" name="WhatsApp Marketing" sequence="1"
+              action="action_whatsapp_marketing"/>
+    <menuitem id="menu_whatsapp_messaging_lists" name="WhatsApp Messaging Lists" sequence="2"
+              action="action_whatsapp_marketing" parent="menu_whatsapp_marketing"/>
+</odoo>

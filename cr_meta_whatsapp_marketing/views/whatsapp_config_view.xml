@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="whatsapp_marketing_campaign_tree_view" model="ir.ui.view">
+        <field name="name">whatsapp.marketing.campaign.tree</field>
+        <field name="model">whatsapp.marketing.campaign</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="name"/>
+                <field name="in_queue_percentage"/>
+                <field name="sent_percentage"/>
+                <field name="read_percentage"/>
+                <field name="fail_percentage"/>
+                <field name="delivered_percentage"/>
+                <field name="received_percentage"/>
+                <field name="recipients_model_id"/>
+<!--                <field name="state"/>-->
+<!--                <field name="total_recipients"/>-->
+<!--                <field name="sent_count"/>-->
+<!--                <field name="delivered_count"/>-->
+<!--                <field name="read_count"/>-->
+<!--                <field name="failed_count"/>-->
+<!--                <field name="scheduled_date"/>-->
+            </list>
+        </field>
+    </record>
+
+    <record id="whatsapp_marketing_campaign_form_view" model="ir.ui.view">
+        <field name="name">whatsapp.marketing.campaign.form</field>
+        <field name="model">whatsapp.marketing.campaign</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <field name="state" widget="statusbar"/>
+<!--                    <button name="action_send_now" string="Send Now" type="object" class="btn-primary"-->
+<!--                            attrs="{'invisible': [('state', 'in', ['running', 'done', 'cancelled'])]}"/>-->
+<!--                    <button name="action_schedule" string="Schedule" type="object"-->
+<!--                            attrs="{'invisible': [('state', 'in', ['running', 'done', 'cancelled'])]}"/>-->
+<!--                    <button name="action_cancel" string="Cancel" type="object"-->
+<!--                            attrs="{'invisible': [('state', 'in', ['done', 'cancelled'])]}"/>-->
+<!--                    <field name="state" widget="statusbar"/>-->
+                </header>
+                <sheet>
+                    <group>
+                        <field name="name"/>
+                        <field name="recipients_model_id"/>
+                        <field name="company_id"/>
+                        <field name="template_id"/>
+
+<!--                        <field name="config_id" options="{'no_create': True}"/>-->
+<!--                        <field name="template_id" options="{'no_create': True}"/>-->
+<!--                        <field name="message" widget="text"/>-->
+<!--                        <field name="attachment" filename="attachment_filename"/>-->
+<!--                        <field name="attachment_filename" invisible="1"/>-->
+<!--                        <field name="scheduled_date"/>-->
+                    </group>
+<!--                    <group string="Recipients">-->
+<!--                        <field name="tag_ids" widget="many2many_tags"/>-->
+<!--                        <field name="partner_ids" widget="many2many"/>-->
+<!--                        <field name="total_recipients"/>-->
+<!--                    </group>-->
+<!--                    <group string="Analytics">-->
+<!--                        <field name="sent_count"/>-->
+<!--                        <field name="delivered_count"/>-->
+<!--                        <field name="read_count"/>-->
+<!--                        <field name="failed_count"/>-->
+<!--                    </group>-->
+                    <notebook>
+                    <page string="Content"></page>
+                    <page string="Whatsapp Messages"></page>
+                    <page string="Messages History"></page>
+                    </notebook>
+                </sheet>
+<!--                <div class="oe_chatter">-->
+<!--                    <field name="message_follower_ids"/>-->
+<!--                    <field name="activity_ids"/>-->
+<!--                    <field name="message_ids"/>-->
+<!--                </div>-->
+            </form>
+        </field>
+    </record>
+
+
+</odoo>
