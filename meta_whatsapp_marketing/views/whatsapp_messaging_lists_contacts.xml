@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="whatsapp_messaging_lists_contacts_tree_view" model="ir.ui.view">
+        <field name="name">WhatsApp Messaging Lists Contacts</field>
+        <field name="model">whatsapp.messaging.lists.contacts</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="name"/>
+                <field name="whatsapp_number"/>
+            </list>
+        </field>
+    </record>
+    <record id="whatsapp_messaging_lists_contacts_form_view" model="ir.ui.view">
+        <field name="name">WhatsApp Messaging Lists Contacts</field>
+        <field name="model">whatsapp.messaging.lists.contacts</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group>
+                        <field name="name"/>
+                        <field name="whatsapp_number"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+</odoo>

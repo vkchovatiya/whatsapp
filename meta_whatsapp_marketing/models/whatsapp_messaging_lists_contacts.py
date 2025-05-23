@@ -17,3 +17,5 @@ class WhatsAppMarketingListsContacts(models.Model):
     _rec_name = 'name'
 
     name = fields.Char(string='Contact Name', required=True)
+    whatsapp_number = fields.Char(string='WhatsApp Number', required=True)
+    message_contacts = fields.Many2one('whatsapp.messaging.lists',string="Messaging List")

@@ -31,7 +31,7 @@ class WhatsAppMarketingCampaign(models.Model):
     state = fields.Selection([
         ('draft', 'Draft'),
         ('in_queue', 'In Queue'),
-        ('scheduled', 'Scheduled'),
+        ('scheduled', 'Sending'),
         ('sent', 'Sent'),
     ], string='Status', default='draft', tracking=True)
     template_id = fields.Many2one(

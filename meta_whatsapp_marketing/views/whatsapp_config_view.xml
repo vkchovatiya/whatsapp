@@ -33,8 +33,6 @@
                     <field name="state" widget="statusbar"/>
                     <button name="action_send_now" string="Send Now" type="object" class="btn-primary"
                             invisible="state == 'sent'"/>
-                    <button name="action_schedule" string="Schedule" type="object"
-                            invisible="state == 'sent'"/>
                     <button name="action_cancel" string="Cancel" type="object"
                             invisible="state == 'sent'"/>
                     <button name="action_test" string="Test" type="object"
