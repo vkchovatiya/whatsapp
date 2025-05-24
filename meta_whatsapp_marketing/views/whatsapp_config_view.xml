@@ -75,7 +75,10 @@
                         <page string="Content">
                             <field name="message_preview"/>
                         </page>
-                        <page string="Whatsapp Messages"></page>
+                        <page string="Whatsapp Messages">
+                            <field name="message_history_ids">
+                            </field>
+                        </page>
                         <page string="Messages History"></page>
                     </notebook>
                 </sheet>
