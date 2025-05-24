@@ -18,7 +18,12 @@
                 <sheet>
                     <group>
                         <field name="name"/>
-                        <field name="message_list_contacts"/>
+                        <field name="msg_lists_recipients_model_id"/>
+                        <field name="message_list_contacts_ids" widget="many2many_tags" invisible="lists_selected_model != 'whatsapp.messaging.lists.contacts'"/>
+                        <field name="partner_ids" widget="many2many_tags" invisible="lists_selected_model == 'whatsapp.messaging.lists.contacts'"/>
+                    </group>
+                    <group>
+                        <field name="lists_selected_model"/>
                     </group>
                 </sheet>
             </form>

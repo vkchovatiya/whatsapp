@@ -32,7 +32,7 @@
                 <header>
                     <field name="state" widget="statusbar"/>
                     <button name="action_send_now" string="Send Now" type="object" class="btn-primary"
-                            invisible="state == 'sent'"/>
+                            invisible="state != 'draft'"/>
                     <button name="action_cancel" string="Cancel" type="object"
                             invisible="state == 'sent'"/>
                     <button name="action_test" string="Test" type="object"
@@ -42,7 +42,8 @@
                     <group>
                         <group>
                             <field name="name"/>
-                            <field name="recipients_model_id"/>
+                            <field name="recipients_model_id" options="{'no_create': True}"/>
+
                             <field name="company_id"/>
                             <field name="template_id"/>
                             <!--                        <field name="config_id" options="{'no_create': True}"/>-->
@@ -53,7 +54,9 @@
                             <!--                        <field name="scheduled_date"/>-->
                         </group>
                         <group>
-                            <field name="partner_ids" widget="many2many_tags"/>
+                            <field name="partner_ids" widget="many2many_tags" invisible="selected_model == 'whatsapp.messaging.lists'"/>
+                            <field name="messaging_list_id" invisible="selected_model != 'whatsapp.messaging.lists'"/>
+                            <field name="selected_model"/>
                             <field name="config_id"/>
                         </group>
                     </group>

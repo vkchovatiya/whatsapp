@@ -21,6 +21,7 @@
         'data/cron.xml',
         'views/whatsapp_config_view.xml',
         'views/whatsapp_messaging_lists_contacts.xml',
+        'views/whatsapp_messaging_lists_views.xml',
     ],
     'installable': True,
     'application': True,

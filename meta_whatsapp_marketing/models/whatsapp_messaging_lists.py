@@ -17,6 +17,28 @@ class WhatsAppMarketingLists(models.Model):
     _rec_name = 'name'
 
     name = fields.Char(string='Name', required=True)
-    message_list_contacts = fields.One2many('whatsapp.messaging.lists.contacts','message_contacts',
+    lists_selected_model = fields.Char(string='Selected Model', store=True)
+    msg_lists_recipients_model_id = fields.Many2one(
+        'ir.model',
+        string="Contact Type",
+        help="Model for contacts (e.g., res_partner, whatsapp messaging lists contacts)",
+        domain="[('model', 'in', ('res.partner', 'whatsapp.messaging.lists.contacts'))]"
+    )
+    # message_list_contacts = fields.One2many('whatsapp.messaging.lists.contacts','message_contacts',
+    #     string="Message List Contacts",
+    #     help="Select The Contacts")
+    message_list_contacts_ids = fields.Many2many('whatsapp.messaging.lists.contacts',
         string="Message List Contacts",
         help="Select The Contacts")
+    partner_ids = fields.Many2many(
+        'res.partner',
+        string="Partners",
+        help="Select partner contacts"
+    )
+
+    @api.onchange('msg_lists_recipients_model_id')
+    def _onchange_recipients_model(self):
+        if self.msg_lists_recipients_model_id.model == 'whatsapp.messaging.lists.contacts':
+            self.lists_selected_model = self.msg_lists_recipients_model_id.model
+        if self.msg_lists_recipients_model_id.model == 'res.partner':
+            self.lists_selected_model = self.msg_lists_recipients_model_id.model
