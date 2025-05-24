@@ -6,12 +6,12 @@
         <field name="arch" type="xml">
             <list>
                 <field name="name"/>
-                <field name="in_queue_percentage"/>
-                <field name="sent_percentage"/>
-                <field name="read_percentage"/>
-                <field name="fail_percentage"/>
-                <field name="delivered_percentage"/>
-                <field name="received_percentage"/>
+                <field name="in_queue_percentage" widget='progressbar'/>
+                <field name="sent_percentage" widget='progressbar'/>
+                <field name="read_percentage" widget='progressbar'/>
+                <field name="fail_percentage" widget='progressbar'/>
+                <field name="delivered_percentage" widget='progressbar'/>
+                <field name="received_percentage" widget='progressbar'/>
                 <field name="recipients_model_id"/>
                 <!--                <field name="state"/>-->
                 <!--                <field name="total_recipients"/>-->

@@ -12,7 +12,7 @@
                 <field name="config_id"/>
                 <field name="template_id"/><field name="message_id"/>
                 <field name="send_date"/>
-                <field name="status" />
+                <field name="status" widget="badge"/>
             </list>
         </field>
     </record>

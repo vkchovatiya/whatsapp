@@ -13,10 +13,6 @@
     'depends': ['meta_whatsapp_all_in_one','mail','contacts'],
     'data': [
         'security/ir.model.access.csv',
-        # 'views/whatsapp_marketing_campaign_views.xml',
-        # 'views/res_partner_views.xml',
-        # 'views/whatsapp_marketing_dashboard.xml',
-        # 'data/whatsapp_marketing_data.xml',
         'views/whatsapp_menus.xml',
         'data/cron.xml',
         'views/whatsapp_config_view.xml',
