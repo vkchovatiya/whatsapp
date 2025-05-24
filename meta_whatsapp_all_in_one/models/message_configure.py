@@ -1,12 +1,11 @@
 # -*- coding: utf-8 -*-
 import base64
-from odoo.exceptions import UserError
+from odoo.exceptions import UserError 
 import requests
 from odoo import models, fields, api, _
 import logging
 
 _logger = logging.getLogger(__name__)
-
 
 class MessageConfiguration(models.TransientModel):
     _name = 'message.configuration'
@@ -19,7 +18,7 @@ class MessageConfiguration(models.TransientModel):
     )
     model = fields.Many2one(
         'ir.model',
-        string="model",
+        string="model", 
     )
     message = fields.Text(
         string="Message",
@@ -45,8 +44,7 @@ class MessageConfiguration(models.TransientModel):
     template_id = fields.Many2one(
         'whatsapp.template',
         string="Template",
-        help="Select a template to populate the message field",
-        domain="[('config_id', '=', config_id), ('status', '=', 'APPROVED'), '|', ('available', '=', False), ('available', '=', model)]")
+        help="Select a template to populate the message field" ,domain="[('config_id', '=', config_id), ('status', '=', 'APPROVED'), '|', ('available', '=', False), ('available', '=', model)]" )
     attachment = fields.Binary(
         string="Attachment",
         help="Attach a file (e.g., image, document) to send with the message"
@@ -55,7 +53,8 @@ class MessageConfiguration(models.TransientModel):
         string="Attachment Filename",
         help="Filename of the attachment"
     )
-
+ 
+  
     @api.depends('config_id')
     def _compute_allowed_config_ids(self):
         for record in self:
@@ -125,8 +124,7 @@ class MessageConfiguration(models.TransientModel):
                 media_type = 'audio'
                 mime_type = 'audio/mp3'
             else:
-                raise UserError(
-                    _('Unsupported file type. Supported types: image (jpg, png), document (pdf), video (mp4, 3gp), audio (mp3, amr).'))
+                raise UserError(_('Unsupported file type. Supported types: image (jpg, png), document (pdf), video (mp4, 3gp), audio (mp3, amr).'))
 
             url = f"{self.config_id.api_url}/{self.config_id.instance_id}/media"
             headers = {
@@ -138,8 +136,7 @@ class MessageConfiguration(models.TransientModel):
                 'type': (None, media_type),
             }
             response = requests.post(url, headers=headers, files=files)
-            if response.status_code != 200:
-                _logger.error("Failed to upload media: %s", response.text)
+            if response.status_code != 200: 
                 raise UserError(_('Failed to upload media: %s') % response.text)
 
             media_id = response.json().get('id')
@@ -148,19 +145,19 @@ class MessageConfiguration(models.TransientModel):
 
             return media_id, media_type, file_data, self.attachment_filename
 
-        except Exception as e:
-            _logger.error("Error uploading media: %s", str(e))
+        except Exception as e: 
             raise UserError(_('Error uploading media: %s') % str(e))
 
+ 
     def action_send_message(self):
         self.ensure_one()
         at_least_one_success = False
         any_attempt_made = False
-
+    
         number = self.recipient.phone if self.number == 'phone' else self.recipient.mobile
         if number and number.startswith('+'):
             number = number[1:]
-
+    
         log_vals = {
             'number': number,
             'user': self.env.user.id,
@@ -171,7 +168,7 @@ class MessageConfiguration(models.TransientModel):
             'attachment_filename': self.attachment_filename,
             'partner_id': self.recipient.id if self.recipient else False,
         }
-
+    
         if not self.config_id or not self.recipient:
             log_vals.update({'status': 'failed'})
             self.env['whatsapp.message.history'].create(log_vals)
@@ -186,10 +183,10 @@ class MessageConfiguration(models.TransientModel):
                     'next': {'type': 'ir.actions.act_window_close'},
                 }
             }
-
+    
         if self.config_id not in self.env.user.allowed_providers:
             raise UserError(_("Selected configuration is not allowed for this user."))
-
+    
         media_id = None
         media_type = None
         file_data = None
@@ -197,19 +194,18 @@ class MessageConfiguration(models.TransientModel):
         if self.attachment:
             try:
                 media_id, media_type, file_data, filename = self._upload_media()
-            except Exception as e:
+            except Exception as e: 
                 _logger.error("Error uploading media: %s", str(e))
                 media_id = None
-
+    
         headers = {
             'Authorization': f'Bearer {self.config_id.access_token}',
             'Content-Type': 'application/json',
         }
         url = f"{self.config_id.api_url}/{self.config_id.instance_id}/messages"
-
-        channel = self._get_or_create_chat_channel(self.recipient, self.config_id.id)
-        _logger.info('Created/found channel: %s (ID: %d)', channel.name, channel.id)
-
+    
+        channel = self._get_or_create_chat_channel(self.recipient, self.config_id.id) 
+    
         if self.template_id:
             any_attempt_made = True
             template_payload = {
@@ -226,21 +222,32 @@ class MessageConfiguration(models.TransientModel):
             }
             try:
                 response = requests.post(url, headers=headers, json=template_payload)
-                _logger.info('WhatsApp API response: %s', response.text)
+                _logger.info("Template message response status: %s", response.status_code)
+                _logger.info("Template message response text: %s", response.text)
+                
                 if response.status_code in [200, 201]:
-                    at_least_one_success = True
-                    response_data = response.json()
-                    message_id = response_data.get('messages', [{}])[0].get('id')
-
-                    conversation_id = response_data.get('conversations', [{}])[0].get('id', False)
-                    log_vals.update({
-                        'message_id': message_id,
-                        'conversation_id': conversation_id,
-                    })
+                    try:
+                        response_data = response.json()
+                        _logger.info("Template message response data: %s", response_data)
+                        messages = response_data.get('messages', [])
+                        if messages:
+                            at_least_one_success = True
+                            message_id = messages[0].get('id')
+                            _logger.info(message_id)
+                            conversation_id = response_data.get('conversations', [{}])[0].get('id', False)
+                            log_vals.update({
+                                'message_id': message_id,
+                                'conversation_id': conversation_id,
+                            })
+                        
+                    except ValueError as e:
+                        _logger.error("Failed to parse template response as JSON: %s", str(e))
+                else:
+                    _logger.error("WhatsApp API error for template message: %s", response.text)
             except Exception as e:
                 _logger.error("Error sending template message: %s", str(e))
-
-        if self.message:
+    
+        if self.message and not self.template_id:
             any_attempt_made = True
             text_payload = {
                 "messaging_product": "whatsapp",
@@ -252,42 +259,48 @@ class MessageConfiguration(models.TransientModel):
             }
             try:
                 response = requests.post(url, headers=headers, json=text_payload)
-                _logger.info('WhatsApp API response: %s', response.text)
+                _logger.info("Text message response status: %s", response.status_code)
+                _logger.info("Text message response text: %s", response.text)
+                
                 if response.status_code in [200, 201]:
-                    at_least_one_success = True
-                    response_data = response.json()
-                    message_id = response_data.get('messages', [{}])[0].get('id')
-                    conversation_id = response_data.get('conversations', [{}])[0].get('id', False)
-                    log_vals.update({
-                        'message_id': message_id,
-                        'conversation_id': conversation_id,
-                    })
-                    if channel:
-                        message = self.env['mail.message'].sudo().create({
-                            'model': 'discuss.channel',
-                            'res_id': channel.id,
-                            'message_type': 'comment',
-                            'subtype_id': self.env.ref('mail.mt_comment').id,
-                            'body': self.message,
-                            'author_id': self.env.user.partner_id.id,
-                            'date': fields.Datetime.now(),
-                            'whatsapp_message_id': message_id,
-                        })
-
-                        _logger.info('Created mail.message for text: ID %d, body %s, channel %d', message.id,
-                                     self.message, channel.id)
-                        self.env['bus.bus']._sendone(
-                            channel, 'discuss.channel/transient_message', {
-                                'body': self.message,
-                                'author_id': self.env.user.partner_id.id,
-                                'channel_id': channel.id,
-                            }
-                        )
+                    try:
+                        response_data = response.json()
+                        _logger.info("Text message response data: %s", response_data)
+                        messages = response_data.get('messages', [])
+                        if messages:
+                            at_least_one_success = True
+                            message_id = messages[0].get('id')
+                            _logger.info(message_id)
+                            conversation_id = response_data.get('conversations', [{}])[0].get('id', False)
+                            log_vals.update({
+                                'message_id': message_id,
+                                'conversation_id': conversation_id,
+                            })
+                            if channel:
+                                message = self.env['mail.message'].sudo().create({
+                                    'model': 'discuss.channel',
+                                    'res_id': channel.id,
+                                    'message_type': 'comment',
+                                    'subtype_id': self.env.ref('mail.mt_comment').id,
+                                    'body': self.message,
+                                    'author_id': self.env.user.partner_id.id,
+                                    'date': fields.Datetime.now(),
+                                    'whatsapp_message_id': message_id,
+                                }) 
+                                self.env['bus.bus']._sendone(
+                                    channel, 'discuss.channel/transient_message', {
+                                        'body': self.message,
+                                        'author_id': self.env.user.partner_id.id,
+                                        'channel_id': channel.id,
+                                    }
+                                ) 
+                    except ValueError as e:
+                        _logger.error("Failed to parse text response as JSON: %s", str(e))
                 else:
-                    _logger.error("WhatsApp API error: %s", response.text)
+                    _logger.error("WhatsApp API error for text message: %s", response.text)
             except Exception as e:
                 _logger.error("Error sending text message: %s", str(e))
-
+    
         if media_id:
             any_attempt_made = True
             media_payload = {
@@ -300,48 +313,53 @@ class MessageConfiguration(models.TransientModel):
             }
             try:
                 response = requests.post(url, headers=headers, json=media_payload)
-                _logger.info('WhatsApp API response: %s', response.text)
+                _logger.info("Media message response status: %s", response.status_code)
+                _logger.info("Media message response text: %s", response.text)
+                
                 if response.status_code in [200, 201]:
-                    at_least_one_success = True
-                    response_data = response.json()
-                    message_id = response_data.get('messages', [{}])[0].get('id')
-                    conversation_id = response_data.get('conversations', [{}])[0].get('id', False)
-                    log_vals.update({
-                        'message_id': message_id,
-                        'conversation_id': conversation_id,
-                    })
-                    if channel:
-                        attachment = self.env['ir.attachment'].sudo().create({
-                            'name': filename,
-                            'datas': base64.b64encode(file_data),
-                            'res_model': 'discuss.channel',
-                            'res_id': channel.id,
-                            'mimetype': {
-                                'image': 'image/jpeg' if filename.endswith(('.jpg', '.jpeg')) else 'image/png',
-                                'document': 'application/pdf',
-                                'video': 'video/mp4',
-                                'audio': 'audio/mp3',
-                            }.get(media_type, 'application/octet-stream'),
-                        })
-
-                        message = self.env['mail.message'].sudo().create({
-                            'model': 'discuss.channel',
-                            'res_id': channel.id,
-                            'message_type': 'comment',
-                            'subtype_id': self.env.ref('mail.mt_comment').id,
-                            'body': '',
-                            'author_id': self.env.user.partner_id.id,
-                            'date': fields.Datetime.now(),
-                            'whatsapp_message_id': message_id,
-                            'attachment_ids': [(4, attachment.id)],
-                        })
-
-
+                    try:
+                        response_data = response.json()
+                        _logger.info("Media message response data: %s", response_data)
+                        messages = response_data.get('messages', [])
+                        if messages:
+                            at_least_one_success = True
+                            message_id = messages[0].get('id')
+                            conversation_id = response_data.get('conversations', [{}])[0].get('id', False)
+                            log_vals.update({
+                                'message_id': message_id,
+                                'conversation_id': conversation_id,
+                            })
+                            if channel:
+                                attachment = self.env['ir.attachment'].sudo().create({
+                                    'name': filename,
+                                    'datas': base64.b64encode(file_data),
+                                    'res_model': 'discuss.channel',
+                                    'res_id': channel.id,
+                                    'mimetype': {
+                                        'image': 'image/jpeg' if filename.endswith(('.jpg', '.jpeg')) else 'image/png',
+                                        'document': 'application/pdf',
+                                        'video': 'video/mp4',
+                                        'audio': 'audio/mp3',
+                                    }.get(media_type, 'application/octet-stream'),
+                                })
+                                message = self.env['mail.message'].sudo().create({
+                                    'model': 'discuss.channel',
+                                    'res_id': channel.id,
+                                    'message_type': 'comment',
+                                    'subtype_id': self.env.ref('mail.mt_comment').id,
+                                    'body': '',
+                                    'author_id': self.env.user.partner_id.id,
+                                    'date': fields.Datetime.now(),
+                                    'whatsapp_message_id': message_id,
+                                    'attachment_ids': [(4, attachment.id)],
+                                }) 
+                    except ValueError as e:
+                        _logger.error("Failed to parse media response as JSON: %s", str(e))
                 else:
-                    _logger.error("WhatsApp API error: %s", response.text)
+                    _logger.error("WhatsApp API error for media message: %s", response.text)
             except Exception as e:
                 _logger.error("Error sending media message: %s", str(e))
-
+    
         if not any_attempt_made:
             log_vals.update({'status': 'failed'})
             self.env['whatsapp.message.history'].create(log_vals)
@@ -356,20 +374,19 @@ class MessageConfiguration(models.TransientModel):
                     'next': {'type': 'ir.actions.act_window_close'},
                 }
             }
-
+    
         log_vals.update({
             'status': 'sent' if at_least_one_success else 'failed',
         })
         history_record = self.env['whatsapp.message.history'].sudo().create(log_vals)
-        _logger.info('Created whatsapp.message.history: ID %d, status %s', history_record.id, log_vals['status'])
-
+    
         notification_type = 'success' if at_least_one_success else 'warning'
         notification_message = (
             _('Message sent successfully to %s!') % self.recipient.name
             if at_least_one_success
             else _('Failed to send message to %s.') % self.recipient.name
         )
-
+    
         return {
             'type': 'ir.actions.client',
             'tag': 'display_notification',
@@ -378,10 +395,12 @@ class MessageConfiguration(models.TransientModel):
                 'message': notification_message,
                 'type': notification_type,
                 'sticky': False,
-
+                'next': {'type': 'ir.actions.act_window_close'},
             }
         }
 
+
+    
     def _get_or_create_chat_channel(self, partner, config_id=False):
         if not partner:
             return False
@@ -408,17 +427,12 @@ class MessageConfiguration(models.TransientModel):
                     'partner_id': self.env.user.partner_id.id,
                 }), (0, 0, {
                     'partner_id': partner.id,
-                })],
+                })], 
             }
             if config_id:
                 channel_vals['whatsapp_config_id'] = config_id
-            channel = self.env['discuss.channel'].sudo().create(channel_vals)
-            channel._ensure_member(self.env.user.partner_id)
-
-        _logger.info('Channel created/found: %s (ID: %d, Members: %s)',
-                     channel.name, channel.id, channel.channel_member_ids.mapped('partner_id.name'))
+            channel = self.env['discuss.channel'].sudo().create(channel_vals) 
         return channel
-
 
 class ResPartner(models.Model):
     _inherit = 'res.partner'
@@ -426,15 +440,15 @@ class ResPartner(models.Model):
     def action_send_message(self):
         """Open the MessageConfiguration wizard to send a WhatsApp message."""
         self.ensure_one()
-        model = self.env['ir.model'].search([('model', '=', 'res.partner')])
-        print('called')
+        model = self.env['ir.model'].search([('model','=','res.partner')])
+        print('called')  
         return {
             'type': 'ir.actions.act_window',
             'name': _('Write Message'),
             'res_model': 'message.configuration',
             'view_mode': 'form',
             'view_id': self.env.ref('meta_whatsapp_all_in_one.view_message_configuration_form').id,
-            'target': 'new',
+            'target': 'new',   
             'context': {
                 'default_recipient': self.id,
                 'default_model': model.id

@@ -12,57 +12,98 @@
     </record>
 
     <record id="view_whatsapp_template_form" model="ir.ui.view">
-    <field name="name">whatsapp.template.form</field>
-    <field name="model">whatsapp.template</field>
-    <field name="arch" type="xml">
-        <form string="WhatsApp Template">
-            <field name="add_status" invisible='1'/>
-            <header>
-            <button name="action_resubmit_template" type="object"  string="Resubmit Template" class="oe_highlight"/>
-            <button name="action_create_template" type="object"  string="Add Template" class="oe_highlight"/>
-            <button name="action_get_status" type="object" string="Get Status" class="oe_highlight"/>
-            <button name="action_remove_template" type="object" string="Remove Template"
-            class="oe_highlight" confirm="Are you sure you want to remove this template? This action cannot be undone."/>
-</header>
-            <sheet>
-                <group>
-                    <field name="name"/>
-                    <field name="template_id"/>
-
-                    <field name="lang" widget="many2one"/>
-                    <field name="category"/>
-                    <field name="status"/>
-                    <field name="parameter_format"/>
-                    <field name="config_id"/>
-                    <field name="available"/>
-                </group>
-                <notebook>
-                    <page string="Message">
-                        <group>
-                            <field name="message" nolabel="1" placeholder="Enter the message content here..."/>
-                        </group>
-                    </page>
-                    <page string="Components">
-                        <group>
-                            <field name="component_ids" widget="one2many_list">
-                                <list>
-                                    <field name="type"/>
-                                    <field name="format" invisible="type !='HEADER'" />
-                                    <field name="text"/>
-                                    <field name="parameter_ids" widget="one2many_list"  >
-                                        <list>
-                                            <field name="fieldd" />
-                                        </list>
-                                    </field>
-                                </list>
-                            </field>
-                        </group>
-                    </page>
-                </notebook>
-            </sheet>
-        </form>
-    </field>
-</record>
+        <field name="name">whatsapp.template.form</field>
+        <field name="model">whatsapp.template</field>
+        <field name="arch" type="xml">
+            <form string="WhatsApp Template">
+                <field name="add_status" invisible="1"/>
+                <header>
+                    <button name="action_resubmit_template" type="object" string="Resubmit Template" class="oe_highlight" invisible="add_status == 'new'"/>
+                    <button name="action_create_template" type="object" string="Add Template" class="oe_highlight" invisible="add_status == 'added'"/>
+                    <button name="action_get_status" type="object" string="Get Status" class="oe_highlight"/>
+                    <button name="action_remove_template" type="object" string="Remove Template" class="oe_highlight"
+                            confirm="Are you sure you want to remove this template? This action cannot be undone."
+                            invisible="add_status == 'new'"/>
+                </header>
+                <sheet>
+                    <group>
+                        <field name="name"/>
+                        <field name="template_id"/>
+                        <field name="lang"/>
+                        <field name="category"/>
+                        <field name="status"/>
+                        <field name="parameter_format"/>
+                        <field name="config_id"/>
+                        <field name="type"/>
+                        <field name="available"/>
+                    </group>
+                    <notebook>
+                        <page string="Message">
+                            <group>
+                                <field name="message" nolabel="1" placeholder="Enter the message content here..." />
+                            </group>
+                        </page>
+                        <page string="Components">
+                            <group>
+                                <field name="component_ids" widget="one2many">
+                                    <list>
+                                        <field name="type"/>
+                                        <field name="format" invisible="context.get('type') != 'HEADER' or context.get('template_id.category') == 'AUTHENTICATION'"/>
+                                        <field name="text" invisible="context.get('type') == 'HEADER' and context.get('format') in ('IMAGE', 'VIDEO', 'DOCUMENT', 'LOCATION') or context.get('type') == 'BODY' and context.get('template_id.category') == 'AUTHENTICATION'"/>
+                                        <field name="media_file" widget="binary" filename="media_filename" invisible="context.get('type') != 'HEADER' or context.get('format') not in ('IMAGE', 'VIDEO', 'DOCUMENT') or context.get('template_id.category') == 'AUTHENTICATION'"/>
+                                        <field name="media_filename" invisible="context.get('type') != 'HEADER' or context.get('format') not in ('IMAGE', 'VIDEO', 'DOCUMENT') or context.get('template_id.category') == 'AUTHENTICATION'"/>
+                                        <field name="location_latitude" widget="geo_edit" invisible="context.get('type') != 'HEADER' or context.get('format') != 'LOCATION' or context.get('template_id.category') == 'AUTHENTICATION'" options="{'map_provider': 'osm'}"/>
+                                        <field name="location_longitude" invisible="context.get('type') != 'HEADER' or context.get('format') != 'LOCATION' or context.get('template_id.category') == 'AUTHENTICATION'"/>
+                                        <field name="location_name" invisible="context.get('type') != 'HEADER' or context.get('format') != 'LOCATION' or context.get('template_id.category') == 'AUTHENTICATION'"/>
+                                        <field name="location_address" invisible="context.get('type') != 'HEADER' or context.get('format') != 'LOCATION' or context.get('template_id.category') == 'AUTHENTICATION'"/>
+                                        <field name="add_security_recommendation" invisible="context.get('type') != 'BODY' or context.get('template_id.category') != 'AUTHENTICATION'"/>
+                                        <field name="code_expiration_minutes" invisible="context.get('type') != 'FOOTER' or context.get('template_id.category') != 'AUTHENTICATION'"/>
+                                        <field name="parameter_ids" widget="one2many" context="{'default_component_id': id}" invisible="context.get('type') == 'BODY' and context.get('template_id.category') == 'AUTHENTICATION'">
+                                            <list>
+                                                <field name="name"/>
+                                                <field name="example"/>
+                                                <field name="fieldd"  />
+                                            </list>
+                                        </field>
+                                        <field name="button_ids" widget="one2many" invisible="context.get('type') != 'BUTTONS'">
+                                            <list>
+                                                <field name="type"/>
+                                                <field name="text"/>
+                                                <field name="phone_number" invisible="context.get('type') != 'PHONE_NUMBER'"/>
+                                                <field name="url" invisible="context.get('type') != 'URL'"/>
+                                                <field name="example" invisible="context.get('type') != 'URL'"/>
+                                                <field name="otp_type" invisible="context.get('type') != 'OTP'"/>
+                                                <field name="autofill_text" invisible="context.get('type') != 'OTP' or context.get('otp_type') != 'ONE_TAP'"/>
+                                                <field name="app_ids" widget="one2many" invisible="context.get('type') != 'OTP'">
+                                                    <list>
+                                                        <field name="platform"/>
+                                                        <field name="package_name" invisible="context.get('platform') != 'android'"/>
+                                                        <field name="signature_hash" invisible="context.get('platform') != 'android'"/>
+                                                        <field name="bundle_id" invisible="context.get('platform') != 'ios'"/>
+                                                    </list>
+                                                </field>
+                                            </list>
+                                        </field>
+                                    </list>
+                                </field>
+                            </group>
+                        </page>
+                        <page string="Parameter Mappings">
+                            <group>
+                                <field name="parameter_mapping_ids" widget="one2many">
+                                    <list>
+                                        <field name="parameter_name"/>
+                                        <field name="field_id" />
+                                        <field name="position"/>
+                                    </list>
+                                </field>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
 
     <record id="action_whatsapp_template" model="ir.actions.act_window">
         <field name="name">WhatsApp Templates</field>

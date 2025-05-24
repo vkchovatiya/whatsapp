@@ -66,3 +66,4 @@ class WhatsAppMessageHistory(models.Model):
         string="Reply to Message ID",
         help="WhatsApp message ID of the message this is a reply to"
     )
+    is_message_sent = fields.Boolean('send message')

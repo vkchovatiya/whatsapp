@@ -10,7 +10,7 @@
                 <field name="user"/>
                 <field name="message"/>
                 <field name="config_id"/>
-                <field name="template_id"/>
+                <field name="template_id"/><field name="message_id"/>
                 <field name="send_date"/>
                 <field name="status" />
             </list>

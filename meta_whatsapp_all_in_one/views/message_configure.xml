@@ -24,11 +24,11 @@
                               <field name="number"/>
                             </div>
                         </div>
-
+        
                         <div class="mt-3">
                             <field name="attachment" filename="attachment_filename"/>
                             <field name="attachment_filename" invisible="1"/>
-                        </div>
+                        </div> 
                 </sheet>
                 <footer>
                     <button name="action_send_message" type="object" string="Send Message" class="oe_highlight"/>
@@ -36,5 +36,5 @@
                 </footer>
             </form>
         </field>
-    </record>
+    </record> 
 </odoo>

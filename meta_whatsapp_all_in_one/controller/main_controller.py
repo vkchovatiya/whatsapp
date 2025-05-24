@@ -11,7 +11,6 @@ from datetime import datetime
 
 _logger = logging.getLogger(__name__)
 
-
 class WhatsAppWebhook(http.Controller):
     """
     Controller to handle Meta WhatsApp Business API webhook requests.
@@ -93,7 +92,9 @@ class WhatsAppWebhook(http.Controller):
             return json.dumps({'error': str(e)})
 
     def _process_whatsapp_notification(self, config, data):
-
+        """
+        Process WhatsApp notifications such as incoming messages and statuses.
+        """
         entries = data.get('entry', [])
         for entry in entries:
             changes = entry.get('changes', [])
@@ -106,8 +107,6 @@ class WhatsAppWebhook(http.Controller):
                     for message in messages:
                         from_number = message.get('from')
                         message_type = message.get('type')
-                        message_content = message.get(message_type, {}).get(
-                            'body') if message_type == 'text' else f"[{message_type} message]"
                         message_id = message.get('id')
                         timestamp = message.get('timestamp')
                         context = message.get('context', {})
@@ -125,6 +124,71 @@ class WhatsAppWebhook(http.Controller):
                             ('default_provider', '=', config.id),
                         ], limit=1)
                         _logger.info(authorized_users)
+
+                        if message_type == 'reaction':
+                            # Handle reaction messages by adding to the original message's reaction_ids
+                            emoji = message.get('reaction', {}).get('emoji', '')
+                            original_message_id = message.get('reaction', {}).get('message_id')
+                            if not emoji or not original_message_id:
+                                _logger.error("Missing emoji or original message ID for reaction: %s", message)
+                                continue
+
+                            # Find the original message in the chat channel
+                            channel = self._get_or_create_chat_channel(partner, config.id)
+                            if not channel:
+                                _logger.error("No chat channel found for partner: %s", partner.name)
+                                continue
+
+                            original_message = request.env['mail.message'].sudo().search([
+                                ('whatsapp_message_id', '=', original_message_id),
+                                ('model', '=', 'discuss.channel'),
+                                ('res_id', '=', channel.id),
+                            ], limit=1)
+
+                            if not original_message:
+                                _logger.error("Original message not found for ID: %s", original_message_id)
+                                continue
+
+                            # Check if the reaction already exists to avoid duplicates
+                            existing_reaction = request.env['mail.message.reaction'].sudo().search([
+                                ('message_id', '=', original_message.id),
+                                ('content', '=', emoji),
+                                ('partner_id', '=', partner.id),
+                            ], limit=1)
+
+                            if not existing_reaction:
+                                # Create a new reaction record
+                                reaction_vals = {
+                                    'message_id': original_message.id,
+                                    'content': emoji,
+                                    'partner_id': partner.id,
+                                }
+                                request.env['mail.message.reaction'].sudo().create(reaction_vals)
+                                _logger.info("Added reaction '%s' to message ID %s by partner %s", emoji, original_message.id, partner.name)
+
+                            # Log the reaction in message history
+                            create_vals = {
+                                'number': from_number,
+                                'partner_id': partner.id if partner else False,
+                                'config_id': config.id,
+                                'message_id': message_id,
+                                'message': f"Reaction: {emoji}",
+                                'status': 'received',
+                                'send_date': message_datetime,
+                                'user': authorized_users.id,
+                                'received_date': message_datetime,
+                            }
+                            if reply_to_message_id:
+                                create_vals['reply_to_message_id'] = reply_to_message_id
+                            request.env['whatsapp.message.history'].sudo().create(create_vals)
+                            continue  # Skip creating a new message for reactions
+
+                        # Handle other message types (text, etc.)
+                        if message_type == 'text':
+                            message_content = message.get('text', {}).get('body', '')
+                        else:
+                            message_content = f"[{message_type} message]"
+
                         create_vals = {
                             'number': from_number,
                             'partner_id': partner.id if partner else False,
@@ -232,6 +296,9 @@ class WhatsAppWebhook(http.Controller):
             ('channel_member_ids.partner_id', 'in', [authorized_users.partner_id.id]),
             ('channel_member_ids.partner_id', 'in', [partner.id]),
         ], limit=1)
+        _logger.info(authorized_users)
+        _logger.info(channel)
+        _logger.info(partner.name)
 
         if not channel:
             channel_vals = {
@@ -253,11 +320,7 @@ class WhatsAppWebhook(http.Controller):
         """
         Find or create a res.partner record based on the phone number using a raw SQL query.
         """
-        # normalized_mobile = request.env['res.partner'].sudo().normalize_phone_number(partner.normalized_mobile)
-        # normalized_phone = request.env['res.partner'].sudo().normalize_phone_number(partner.normalized_phone)
         received_normalize = request.env['res.partner'].sudo().normalize_phone_number(phone_number)
-        # _logger.info(normalized_mobile)
-        # _logger.info(normalized_phone)
         _logger.info(received_normalize)
         # Use raw SQL query to search for a partner where mobile or phone matches the phone_number
         request.env.cr.execute("""

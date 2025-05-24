@@ -1,5 +1,5 @@
 <odoo>
-
+    
     <record id="action_view_history" model="ir.actions.act_window">
         <field name="name">Message History</field>
         <field name="res_model">whatsapp.message.history</field>
@@ -14,7 +14,7 @@
            <div name="button_box" position="inside">
                     <button class="oe_stat_button" type="action" name="%(action_view_history)d" icon="fa-whatsapp"><div>Message History</div>
                     </button>
-                </div>
+                </div> 
             <xpath expr="//sheet" position="before">
                 <header>
                     <button name="action_send_message"
@@ -37,7 +37,7 @@
                     <field name="allowed_providers" widget="many2many_tags"/>
                  <label for="default_provider" string="Default Provider"/>
                     <field name="default_provider"/>
-
+                  
             </xpath>
         </field>
     </record>

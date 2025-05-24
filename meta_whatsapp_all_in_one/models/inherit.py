@@ -56,6 +56,8 @@ class ResUsers(models.Model):
         domain="[('id', 'in', allowed_providers)]",
         help="Default WhatsApp configuration used for sending messages."
     )
+    odoobot_state = fields.Char(string="WhatsApp Message ID")
+    
 class MailMessage(models.Model):
     _inherit = 'mail.message'
 
