@@ -2,10 +2,11 @@
 # Part of Creyox Technologies.
 
 from odoo import models, fields, api, _
-from odoo.exceptions import UserError
+from odoo.exceptions import UserError, ValidationError
 import requests
 import logging
 from datetime import datetime, timedelta
+from ast import literal_eval
 
 _logger = logging.getLogger(__name__)
 
@@ -25,6 +26,7 @@ class WhatsAppMarketingCampaign(models.Model):
     recipients_model_id = fields.Many2one(
         'ir.model',
         string="Recipients Model",
+        domain="[('model', 'in', ('res.partner', 'whatsapp.messaging.lists'))]",
     )
     selected_model = fields.Char(string='Selected Model', store=True)
     message_history_ids = fields.One2many(
@@ -32,6 +34,13 @@ class WhatsAppMarketingCampaign(models.Model):
         'campaign_id',
         string="Message History",
         help="History of messages sent in this campaign"
+    )
+    contact_message_summary = fields.One2many(
+        'whatsapp.campaign.contact.summary',
+        'campaign_id',
+        string="Contact Message Summary",
+        compute='_compute_contact_message_summary',
+        help="Summary of messages sent per contact"
     )
     company_id = fields.Many2one(
         'res.company', string="Company", default=lambda self: self.env.company
@@ -70,6 +79,37 @@ class WhatsAppMarketingCampaign(models.Model):
         string="Scheduled Send Time",
         help="Time when the campaign messages are scheduled to be sent"
     )
+    mailing_domain = fields.Char(
+        string='Filter Domain',
+        default='[]',
+        help="Domain to filter recipients for the campaign"
+    )
+    use_mailing_domain = fields.Boolean(
+        string='Use Filter Domain',
+        default=False,
+        help="Enable to apply a domain filter for selecting recipients"
+    )
+    # mailing_model_real = fields.Char(
+    #     string='Real Recipients Model',
+    #     compute='_compute_mailing_model_real',
+    #     help="Technical field to determine the model for the domain widget"
+    # )
+    #
+    # @api.depends('recipients_model_id')
+    # def _compute_mailing_model_real(self):
+    #     """Compute the real model name for the domain widget."""
+    #     for campaign in self:
+    #         campaign.mailing_model_real = campaign.recipients_model_id.model if campaign.recipients_model_id else False
+    #
+    # @api.constrains('mailing_domain', 'recipients_model_id')
+    # def _check_mailing_domain(self):
+    #     """Validate the mailing domain."""
+    #     for campaign in self:
+    #         if campaign.mailing_domain and campaign.mailing_domain != '[]' and campaign.recipients_model_id:
+    #             try:
+    #                 self.env[campaign.recipients_model_id.model].search_count(literal_eval(campaign.mailing_domain))
+    #             except Exception:
+    #                 raise ValidationError(_("The filter domain is not valid for the selected recipients model."))
 
     @api.depends('message_history_ids')
     def _compute_statistics(self):
@@ -125,15 +165,44 @@ class WhatsAppMarketingCampaign(models.Model):
                     'fail_percentage': round(100.0 * stats['failed'] / total, 2),
                 })
 
+    @api.depends('message_history_ids')
+    def _compute_contact_message_summary(self):
+        """Compute contact-based message summary."""
+        for campaign in self:
+            summary_data = {}
+            for message in campaign.message_history_ids:
+                if not message.partner_id and not message.number:
+                    _logger.warning("Skipping message ID %s in campaign %s: no partner_id or number", message.id, campaign.name)
+                    continue
+                key = message.partner_id.id if message.partner_id else message.number
+                if key not in summary_data:
+                    summary_data[key] = {
+                        'partner_id': message.partner_id.id,
+                        'whatsapp_number': message.number,
+                        'message_count': 0,
+                    }
+                summary_data[key]['message_count'] += 1
+
+            summary_records = [
+                (0, 0, {
+                    'campaign_id': campaign.id,
+                    'partner_id': data['partner_id'] or False,
+                    'whatsapp_number': data['whatsapp_number'] or '',
+                    'message_count': data['message_count'],
+                }) for data in summary_data.values()
+            ]
+            campaign.contact_message_summary = summary_records or [(5, 0, 0)]
+
     @api.onchange('recipients_model_id')
     def _onchange_recipients_model(self):
         if self.recipients_model_id.model in ('whatsapp.messaging.lists', 'res.partner'):
             self.selected_model = self.recipients_model_id.model
+            self.mailing_domain = '[]'  # Reset domain when model changes
 
     @api.onchange('messaging_list_id')
     def _onchange_recipients(self):
         """Update partner_ids based on messaging_list_id if recipients_model_id is whatsapp.messaging.lists."""
-        self.partner_ids = [(5, 0, 0)]  # Clear existing partners
+        self.partner_ids = [(5, 0, 0)]
         if self.recipients_model_id.model == 'whatsapp.messaging.lists' and self.messaging_list_id:
             partners = []
             for contact in self.messaging_list_id.message_list_contacts_ids:
@@ -157,12 +226,12 @@ class WhatsAppMarketingCampaign(models.Model):
     def action_send_now(self):
         """Queue campaign for sending and log in_queue status."""
         self.ensure_one()
-        if not self.config_id or not self.template_id or not self.partner_ids:
+        if not self.config_id or not self.template_id:
             raise UserError(_('Please set a provider, template, and recipients before sending.'))
         if self.recipients_model_id.model == 'whatsapp.messaging.lists' and not self.messaging_list_id:
             raise UserError(_('Please select a messaging list.'))
-        if self.recipients_model_id.model == 'res.partner' and not self.partner_ids:
-            raise UserError(_('Please select recipients.'))
+        if self.recipients_model_id.model == 'res.partner' and not self.partner_ids and (not self.use_mailing_domain or self.mailing_domain == '[]'):
+            raise UserError(_('Please select recipients or enable and define a filter domain.'))
 
         # Determine recipients
         if self.recipients_model_id.model == 'whatsapp.messaging.lists' and self.messaging_list_id:
@@ -173,7 +242,14 @@ class WhatsAppMarketingCampaign(models.Model):
                 recipients = self.messaging_list_id.partner_ids
                 recipient_type = 'partner'
         else:
-            recipients = self.partner_ids
+            if not self.partner_ids and self.use_mailing_domain and self.mailing_domain != '[]':
+                try:
+                    domain = literal_eval(self.mailing_domain)
+                    recipients = self.env['res.partner'].search(domain)
+                except Exception:
+                    raise UserError(_('Invalid filter domain.'))
+            else:
+                recipients = self.partner_ids
             recipient_type = 'partner'
 
         # Log in_queue status for each recipient
@@ -182,11 +258,14 @@ class WhatsAppMarketingCampaign(models.Model):
             if recipient_type == 'contact':
                 number = recipient.whatsapp_number
                 partner_id = self.env['res.partner'].search([('phone', '=', number)], limit=1).id or False
+                recipient_name = recipient.name
             else:
                 number = recipient.phone or recipient.mobile
                 partner_id = recipient.id
+                recipient_name = recipient.name
 
             if not number:
+                _logger.warning("Skipping recipient %s: no phone number", recipient_name)
                 continue
 
             message_history.create({
@@ -304,7 +383,14 @@ class WhatsAppMarketingCampaign(models.Model):
                 recipients = self.messaging_list_id.partner_ids
                 recipient_type = 'partner'
         else:
-            recipients = self.partner_ids
+            if not self.partner_ids and self.use_mailing_domain and self.mailing_domain != '[]':
+                try:
+                    domain = literal_eval(self.mailing_domain)
+                    recipients = self.env['res.partner'].search(domain)
+                except Exception:
+                    raise UserError(_('Invalid filter domain.'))
+            else:
+                recipients = self.partner_ids
             recipient_type = 'partner'
 
         if not recipients:

@@ -83,7 +83,11 @@
                         <group>
                             <field name="name"/>
                             <field name="recipients_model_id" options="{'no_create': True}"/>
-
+                            <field name="use_mailing_domain" invisible="selected_model == 'whatsapp.messaging.lists'"/>
+                            <field name="mailing_domain" widget="domain"
+                                   options="{'model': 'selected_model', 'foldable': true}"
+                                   invisible="selected_model == 'whatsapp.messaging.lists' or use_mailing_domain == False"
+                                   readonly="state in ('in_queue', 'scheduled', 'sent')"/>
                             <field name="company_id"/>
                             <field name="template_id"/>
                             <!--                        <field name="config_id" options="{'no_create': True}"/>-->
@@ -94,7 +98,7 @@
                             <!--                        <field name="scheduled_date"/>-->
                         </group>
                         <group>
-                            <field name="partner_ids" widget="many2many_tags" invisible="selected_model == 'whatsapp.messaging.lists'"/>
+                            <field name="partner_ids" widget="many2many_tags" invisible="selected_model == 'whatsapp.messaging.lists' or use_mailing_domain == True"/>
                             <field name="messaging_list_id" invisible="selected_model != 'whatsapp.messaging.lists'"/>
                             <field name="selected_model"/>
                             <field name="config_id"/>
@@ -119,7 +123,15 @@
                             <field name="message_history_ids">
                             </field>
                         </page>
-                        <page string="Messages History"></page>
+                        <page string="Contact Messages History">
+                            <field name="contact_message_summary">
+                                <list>
+                                    <field name="partner_id" string="Contact"/>
+                                    <field name="whatsapp_number" string="WhatsApp Number"/>
+                                    <field name="message_count" string="Number of Messages"/>
+                                </list>
+                            </field>
+                        </page>
                     </notebook>
                 </sheet>
                 <!--                <div class="oe_chatter">-->
