@@ -44,7 +44,7 @@ class WhatsAppMessageHistory(models.Model):
         help="Date and time when the message was received"
     )
     status = fields.Selection(
-        [('sent', 'Sent'), ('delivered', 'Delivered'), ('read', 'Read'), ('received', 'Received'), ('failed', 'Failed')],
+        [('sent', 'Sent'), ('delivered', 'Delivered'), ('read', 'Read'), ('received', 'Received'), ('failed', 'Failed'),('in_queue','In Queue')],
         string="Status",
         default='sent',
         help="Status of the message delivery"

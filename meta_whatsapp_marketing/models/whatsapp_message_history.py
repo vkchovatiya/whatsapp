@@ -48,10 +48,6 @@ class WhatsAppMessageHistory(models.Model):
         string="Error",
         help="Reason for message failure, if any"
     )
-    status = fields.Selection([
-        ('sent', 'Sent'),
-        ('failed', 'Failed'),
-    ], string="Status", help="Message delivery status")
 
     @api.depends('user', 'user.company_id')
     def _compute_author(self):

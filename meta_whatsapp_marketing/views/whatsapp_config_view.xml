@@ -37,8 +37,48 @@
                             invisible="state == 'sent'"/>
                     <button name="action_test" string="Test" type="object"
                             invisible="state != 'draft'"/>
+
+
+
                 </header>
+
+
+
+
                 <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_test"
+                                type="object"
+                                class="oe_stat_button">
+                            <field name="in_queue_percentage" string="In Queue" widget="percentpie"/>
+                    </button>
+                        <button name="action_test"
+                                type="object"
+                                class="oe_stat_button">
+                            <field name="sent_percentage" string="Sent" widget="percentpie"/>
+                    </button>
+                        <button name="action_test"
+                                type="object"
+                                class="oe_stat_button">
+                            <field name="delivered_percentage" string="Delivered" widget="percentpie"/>
+                    </button>
+                        <button name="action_test"
+                                type="object"
+                                class="oe_stat_button">
+                            <field name="received_percentage" string="Received" widget="percentpie"/>
+                    </button>
+                        <button name="action_test"
+                                type="object"
+                                class="oe_stat_button">
+                            <field name="read_percentage" string="Read" widget="percentpie"/>
+                    </button>
+                        <button name="action_test"
+                                type="object"
+                                class="oe_stat_button">
+                            <field name="fail_percentage" string="Fail" widget="percentpie"/>
+                    </button>
+                    </div>
+
                     <group>
                         <group>
                             <field name="name"/>

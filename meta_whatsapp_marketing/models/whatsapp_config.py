@@ -16,32 +16,23 @@ class WhatsAppMarketingCampaign(models.Model):
     _rec_name = 'name'
 
     name = fields.Char(string='Name', required=True)
-    in_queue_percentage = fields.Char(string='In Queue(%)')
-    sent_percentage = fields.Char(string='Sent(%)')
-    delivered_percentage = fields.Char(string='Delivered(%)')
-    received_percentage = fields.Char(string='Received(%)')
-    read_percentage = fields.Char(string='Read(%)')
-    fail_percentage = fields.Char(string='Fail(%)')
-    recipients_model_id = fields.Many2one("ir.model",
+    in_queue_percentage = fields.Float(string='In Queue(%)', compute='_compute_statistics')
+    sent_percentage = fields.Float(string='Sent(%)', compute='_compute_statistics')
+    delivered_percentage = fields.Float(string='Delivered(%)', compute='_compute_statistics')
+    received_percentage = fields.Float(string='Received(%)', compute='_compute_statistics')
+    read_percentage = fields.Float(string='Read(%)', compute='_compute_statistics')
+    fail_percentage = fields.Float(string='Fail(%)', compute='_compute_statistics')
+    recipients_model_id = fields.Many2one(
+        'ir.model',
         string="Recipients Model",
     )
-    selected_model = fields.Char(string='Selected Model' , store=True)
+    selected_model = fields.Char(string='Selected Model', store=True)
     message_history_ids = fields.One2many(
         'whatsapp.message.history',
         'campaign_id',
         string="Message History",
         help="History of messages sent in this campaign"
     )
-
-
-
-    @api.onchange('recipients_model_id')
-    def _onchange_recipients_model(self):
-        if self.recipients_model_id.model == 'whatsapp.messaging.lists':
-            self.selected_model = self.recipients_model_id.model
-        if self.recipients_model_id.model == 'res.partner':
-            self.selected_model = self.recipients_model_id.model
-
     company_id = fields.Many2one(
         'res.company', string="Company", default=lambda self: self.env.company
     )
@@ -80,12 +71,70 @@ class WhatsAppMarketingCampaign(models.Model):
         help="Time when the campaign messages are scheduled to be sent"
     )
 
+    @api.depends('message_history_ids')
+    def _compute_statistics(self):
+        """Compute percentages based on message history statuses."""
+        default_vals = {
+            'in_queue_percentage': 0.0,
+            'sent_percentage': 0.0,
+            'delivered_percentage': 0.0,
+            'received_percentage': 0.0,
+            'read_percentage': 0.0,
+            'fail_percentage': 0.0,
+        }
+        if not self.ids:
+            self.update(default_vals)
+            return
+
+        self.env.cr.execute("""
+            SELECT
+                c.id as campaign_id,
+                COUNT(h.id) AS total,
+                COUNT(h.id) FILTER (WHERE h.status = 'in_queue') AS in_queue,
+                COUNT(h.id) FILTER (WHERE h.status = 'sent') AS sent,
+                COUNT(h.id) FILTER (WHERE h.status = 'delivered') AS delivered,
+                COUNT(h.id) FILTER (WHERE h.status = 'received') AS received,
+                COUNT(h.id) FILTER (WHERE h.status = 'read') AS read,
+                COUNT(h.id) FILTER (WHERE h.status = 'failed') AS failed
+            FROM
+                whatsapp_message_history h
+            RIGHT JOIN
+                whatsapp_marketing_campaign c
+                ON (c.id = h.campaign_id)
+            WHERE
+                c.id IN %s
+            GROUP BY
+                c.id
+        """, (tuple(self.ids),))
+
+        all_stats = self.env.cr.dictfetchall()
+        stats_per_campaign = {stats['campaign_id']: stats for stats in all_stats}
+
+        for campaign in self:
+            stats = stats_per_campaign.get(campaign.id)
+            if not stats:
+                campaign.update(default_vals)
+            else:
+                total = stats['total'] or 1
+                campaign.update({
+                    'in_queue_percentage': round(100.0 * stats['in_queue'] / total, 2),
+                    'sent_percentage': round(100.0 * stats['sent'] / total, 2),
+                    'delivered_percentage': round(100.0 * stats['delivered'] / total, 2),
+                    'received_percentage': round(100.0 * stats['received'] / total, 2),
+                    'read_percentage': round(100.0 * stats['read'] / total, 2),
+                    'fail_percentage': round(100.0 * stats['failed'] / total, 2),
+                })
+
+    @api.onchange('recipients_model_id')
+    def _onchange_recipients_model(self):
+        if self.recipients_model_id.model in ('whatsapp.messaging.lists', 'res.partner'):
+            self.selected_model = self.recipients_model_id.model
+
     @api.onchange('messaging_list_id')
     def _onchange_recipients(self):
         """Update partner_ids based on messaging_list_id if recipients_model_id is whatsapp.messaging.lists."""
         self.partner_ids = [(5, 0, 0)]  # Clear existing partners
-        if self.recipients_model_id.model == 'whatsapp.messaging.lists':
-            # Map contacts to partners (create if not exist)
+        if self.recipients_model_id.model == 'whatsapp.messaging.lists' and self.messaging_list_id:
             partners = []
             for contact in self.messaging_list_id.message_list_contacts_ids:
                 partner = self.env['res.partner'].search([
@@ -106,7 +155,7 @@ class WhatsAppMarketingCampaign(models.Model):
         self.message_preview = self.template_id.message if self.template_id else False
 
     def action_send_now(self):
-        """Queue campaign for sending in one hour."""
+        """Queue campaign for sending and log in_queue status."""
         self.ensure_one()
         if not self.config_id or not self.template_id or not self.partner_ids:
             raise UserError(_('Please set a provider, template, and recipients before sending.'))
@@ -114,8 +163,44 @@ class WhatsAppMarketingCampaign(models.Model):
             raise UserError(_('Please select a messaging list.'))
         if self.recipients_model_id.model == 'res.partner' and not self.partner_ids:
             raise UserError(_('Please select recipients.'))
-        # if self.config_id not in self.env.user.allowed_providers:
-        #     raise UserError(_('Selected configuration is not allowed for this user.'))
+
+        # Determine recipients
+        if self.recipients_model_id.model == 'whatsapp.messaging.lists' and self.messaging_list_id:
+            if self.messaging_list_id.msg_lists_recipients_model_id.model == 'whatsapp.messaging.lists.contacts':
+                recipients = self.messaging_list_id.message_list_contacts_ids
+                recipient_type = 'contact'
+            else:
+                recipients = self.messaging_list_id.partner_ids
+                recipient_type = 'partner'
+        else:
+            recipients = self.partner_ids
+            recipient_type = 'partner'
+
+        # Log in_queue status for each recipient
+        message_history = self.env['whatsapp.message.history']
+        for recipient in recipients:
+            if recipient_type == 'contact':
+                number = recipient.whatsapp_number
+                partner_id = self.env['res.partner'].search([('phone', '=', number)], limit=1).id or False
+            else:
+                number = recipient.phone or recipient.mobile
+                partner_id = recipient.id
+
+            if not number:
+                continue
+
+            message_history.create({
+                'campaign_id': self.id,
+                'partner_id': partner_id,
+                'number': number,
+                'user': self.env.user.id,
+                'date': fields.Datetime.now(),
+                'message': self.message_preview,
+                'config_id': self.config_id.id,
+                'template_id': self.template_id.id,
+                'status': 'in_queue',
+            })
+
         self.write({
             'state': 'in_queue',
         })
@@ -150,7 +235,6 @@ class WhatsAppMarketingCampaign(models.Model):
         _logger.info("Cancel called for campaign %s", self.name)
         self.ensure_one()
         self.write({'state': 'draft', 'scheduled_date': False})
-        print(self.selected_model)
         return {
             'type': 'ir.actions.client',
             'tag': 'display_notification',
@@ -292,7 +376,6 @@ class WhatsAppMarketingCampaign(models.Model):
                     'conversation_id': conversation_id,
                 }
                 history_record = message_history.create(log_vals)
-
 
             except requests.RequestException as e:
                 _logger.error("Failed to send message to %s: %s", number, str(e))
