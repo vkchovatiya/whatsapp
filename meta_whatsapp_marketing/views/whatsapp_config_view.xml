@@ -14,12 +14,7 @@
                 <field name="received_percentage" widget='progressbar'/>
                 <field name="recipients_model_id"/>
                 <!--                <field name="state"/>-->
-                <!--                <field name="total_recipients"/>-->
-                <!--                <field name="sent_count"/>-->
-                <!--                <field name="delivered_count"/>-->
-                <!--                <field name="read_count"/>-->
-                <!--                <field name="failed_count"/>-->
-                <!--                <field name="scheduled_date"/>-->
+
             </list>
         </field>
     </record>
