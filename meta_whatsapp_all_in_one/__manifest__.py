@@ -13,10 +13,6 @@
         """,
     "depends": [
         "base",'contacts',
-        # "web",
-        # "point_of_sale",
-        # 'sale_management'
-        # ,'account',
     ],
     "data": [
         'security/ir.model.access.csv',
@@ -26,11 +22,6 @@
         'views/message_history.xml',
         'views/res_partner.xml',
     ],
-    # 'assets': {
-    #     'web.assets_backend': [
-    #             'meta_whatsapp_all_in_one/static/src/css/config.css'
-    #         ],
-    #     },
     "installable": True,
     "auto_install": False,
     "application": True,

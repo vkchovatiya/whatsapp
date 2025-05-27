@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="res_config_settings_inherited_tiktok" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.inherit.tiktok</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="base_setup.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//form" position="inside">
+                <app data-string="Whatsapp" string="Whatsapp Connector" name="Whatsapp Connector" logo="/meta_whatsapp_all_in_one/static/description/icon.png">
+                    <block title="Whatsapp Connector">
+                        <div>
+                            <span class="o_form_label">
+                                Select Account
+                            </span><field name="cr_chatbot_id"   placeholder="Select Account" />
+                        </div>
+                    </block>      
+                </app>
+            </xpath>
+        </field>
+    </record>
+</odoo>

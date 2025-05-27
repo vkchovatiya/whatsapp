@@ -4,7 +4,6 @@ from odoo.exceptions import UserError
 import requests
 from odoo import models, fields, api, _
 import logging
-
 _logger = logging.getLogger(__name__)
 
 class MessageConfiguration(models.TransientModel):
@@ -238,6 +237,7 @@ class MessageConfiguration(models.TransientModel):
                             log_vals.update({
                                 'message_id': message_id,
                                 'conversation_id': conversation_id,
+                                'is_message_sent':True,
                             })
                         
                     except ValueError as e:
@@ -275,6 +275,7 @@ class MessageConfiguration(models.TransientModel):
                             log_vals.update({
                                 'message_id': message_id,
                                 'conversation_id': conversation_id,
+                                'is_message_sent':True,
                             })
                             if channel:
                                 message = self.env['mail.message'].sudo().create({
@@ -287,13 +288,7 @@ class MessageConfiguration(models.TransientModel):
                                     'date': fields.Datetime.now(),
                                     'whatsapp_message_id': message_id,
                                 }) 
-                                self.env['bus.bus']._sendone(
-                                    channel, 'discuss.channel/transient_message', {
-                                        'body': self.message,
-                                        'author_id': self.env.user.partner_id.id,
-                                        'channel_id': channel.id,
-                                    }
-                                ) 
+                                
                     except ValueError as e:
                         _logger.error("Failed to parse text response as JSON: %s", str(e))
                 else:
@@ -328,6 +323,7 @@ class MessageConfiguration(models.TransientModel):
                             log_vals.update({
                                 'message_id': message_id,
                                 'conversation_id': conversation_id,
+                                'is_message_sent':True,
                             })
                             if channel:
                                 attachment = self.env['ir.attachment'].sudo().create({
@@ -402,37 +398,76 @@ class MessageConfiguration(models.TransientModel):
 
     
     def _get_or_create_chat_channel(self, partner, config_id=False):
+        """
+        Find or create a group discuss.channel for the given partner and all operators.
+        """
         if not partner:
+            _logger.error("No partner provided for channel creation")
             return False
 
         if config_id:
             config = self.env['whatsapp.config'].sudo().browse(config_id)
+            if not config.exists():
+                _logger.error("Configuration ID %s not found", config_id)
+                return False
+            if not config.operator_ids:
+                _logger.warning("No operators defined in whatsapp.config ID %s", config_id)
+                return False
+            # Optional: Keep user check if needed for specific business logic
             if self.env.user not in config.operator_ids:
                 _logger.error("User %s not in operator_ids for config %s", self.env.user.name, config_id)
                 return False
+        else:
+            _logger.warning("No config_id provided; proceeding without operator validation")
+            config = False
 
-        channel = self.env['discuss.channel'].sudo().search([
-            ('channel_type', '=', 'chat'),
-            ('whatsapp_config_id', '=', config_id),
-            ('channel_member_ids.partner_id', 'in', [self.env.user.partner_id.id]),
-            ('channel_member_ids.partner_id', 'in', [partner.id]),
-        ], limit=1)
+        try:
+            # Get all operators from whatsapp.config.operator_ids if config exists
+            operator_partners = config.operator_ids.mapped('partner_id') if config else [self.env.user.partner_id]
+            _logger.info("Operators for config ID %s: %s", config_id or 'N/A', [p.name for p in operator_partners])
 
-        if not channel:
-            channel_vals = {
-                'name': f"{self.env.user.name} - {partner.name}",
-                'channel_type': 'chat',
-                'whatsapp_config_id': config_id,
-                'channel_member_ids': [(0, 0, {
-                    'partner_id': self.env.user.partner_id.id,
-                }), (0, 0, {
-                    'partner_id': partner.id,
-                })], 
-            }
+            # Search for an existing group channel with the partner
+            domain = [
+                ('channel_type', '=', 'group'),
+                ('channel_member_ids.partner_id', 'in', [partner.id]),
+            ]
             if config_id:
-                channel_vals['whatsapp_config_id'] = config_id
-            channel = self.env['discuss.channel'].sudo().create(channel_vals) 
-        return channel
+                domain.append(('whatsapp_config_id', '=', config_id))
+            channel = self.env['discuss.channel'].sudo().search(domain, limit=1)
+
+            if not channel:
+                # Create a new group channel with all operators and the partner
+                channel_vals = {
+                    'name': f"WhatsApp Group - {partner.name}",
+                    'channel_type': 'group',
+                    'channel_member_ids': [
+                        (0, 0, {'partner_id': op_partner.id}) for op_partner in operator_partners
+                    ] + [(0, 0, {'partner_id': partner.id})],
+                }
+                if config_id:
+                    channel_vals['whatsapp_config_id'] = config_id
+                _logger.debug("Creating group channel with values: %s", channel_vals)
+                channel = self.env['discuss.channel'].sudo().create(channel_vals)
+                _logger.info("Created new group channel: %s (ID: %d)", channel.name, channel.id)
+            else:
+                # Ensure all operators are members of the existing channel
+                current_member_partners = channel.channel_member_ids.mapped('partner_id')
+                missing_partners = operator_partners - current_member_partners
+                if missing_partners:
+                    new_members = [(0, 0, {'partner_id': p.id}) for p in missing_partners]
+                    _logger.debug("Adding missing members to group channel %s: %s", channel.id, missing_partners.mapped('name'))
+                    channel.write({
+                        'channel_member_ids': new_members
+                    })
+                    _logger.info("Added missing operators %s to group channel ID %s", missing_partners.mapped('name'), channel.id)
+
+            _logger.info('Group channel created/found: %s (ID: %d, Members: %s)',
+                         channel.name, channel.id, channel.channel_member_ids.mapped('partner_id.name'))
+            return channel
+        except Exception as e:
+            _logger.error("Failed to create or update group channel for partner %s and config %s: %s",
+                          partner.name, config_id or 'N/A', str(e))
+            return False
 
 class ResPartner(models.Model):
     _inherit = 'res.partner'
@@ -441,7 +476,7 @@ class ResPartner(models.Model):
         """Open the MessageConfiguration wizard to send a WhatsApp message."""
         self.ensure_one()
         model = self.env['ir.model'].search([('model','=','res.partner')])
-        print('called')  
+         
         return {
             'type': 'ir.actions.act_window',
             'name': _('Write Message'),

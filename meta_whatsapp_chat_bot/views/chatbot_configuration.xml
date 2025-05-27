@@ -1,14 +1,78 @@
 <odoo>
+    <record id="action_view_history" model="ir.actions.act_window">
+        <field name="name">Mesage History</field>
+        <field name="res_model">whatsapp.message.history</field>
+        <field name="view_mode">list,form</field>
+        <field name="domain">[('chatbot_id', '=', active_id)]</field>
+    </record>
+    
     <record id="view_chatbot_configuration_form" model="ir.ui.view">
         <field name="name">chatbot.configuration.form</field>
         <field name="model">chatbot.configuration</field>
         <field name="arch" type="xml">
+            
             <form string="WhatsApp Configuration">
                 <sheet>
-
+                    <div class="oe_button_box" name="button_box">
+                        <button class="oe_stat_button" type="action" name="%(action_view_history)d" icon="fa-history"> <div>Message History</div>
+                        </button> 
+                    </div>
                     <group>
                         <field name="name"/>
+                        <field name="config_id"/>
                     </group>
+                    <notebook>
+                        <page string="Script">
+                            <group>
+                                <field name="script_ids"  nolabel="1">
+                                    <list>
+                                        <field name="sequence"/>
+                                        <field name="step_type"/>
+                                        <field name="message"/>
+                                        <field name="parent_script"/>
+                                         <field name="response"/>
+                                         <field name="action_id"/>
+                                        <field name="template_id"/>
+                                    </list>
+                                </field>
+                            </group>
+                                </page>
+                        <page string="Actions">
+                            <group>
+                                <field name="action_ids">
+                                    <list>
+                                        <field name ="action_name"/>
+                                        <field name ="binding_id"/>
+                                        <field name ="configuration_id"/>
+                                    </list>
+                                </field>   
+                            </group>
+                                </page>
+                    <page string="Operators">
+                        <group>
+                            <field name="operator_ids"  nolabel="1">
+                                <kanban>
+                                <field name="name"/> 
+                                <field name="image_1920"/> 
+                                <field name="email"/> 
+                                <templates>
+                                    <t t-name="kanban-box">
+                                         <field name="image_1920" widget="image" class="oe_kanban_image" options="{'size': [64, 64]}"/>
+                                        <div>
+                                           
+                                            <div class="oe_kanban_details">
+                                                <strong><field name="name"/></strong> 
+                                           
+                                                  
+                                            </div>
+                                        </div>
+                                    </t>
+                                </templates>
+                            </kanban>
+                            </field>
+                        </group>
+                    </page>
+                    </notebook>
                 </sheet>
             </form>
         </field>
@@ -27,7 +91,7 @@
         <field name="name">Chatbot Configuration</field>
         <field name="res_model">chatbot.configuration</field>
         <field name="view_mode">list,form</field>
-    </record>
+    </record>   
         <menuitem id="menu_chatbot_config" name="Chatbot Config"
               parent="meta_whatsapp_all_in_one.menu_whatsapp_config" action ="action_chatbot_config" sequence="2"/>
 

@@ -1,2 +1,4 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
 access_chatbot_configuration,chatbot_configuration,model_chatbot_configuration,,1,1,1,1
+access_chatbot_script,chatbot_script,model_chatbot_script,,1,1,1,1
+access_whatsapp_action,whatsapp_action,model_whatsapp_action,,1,1,1,1

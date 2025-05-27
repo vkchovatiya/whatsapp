@@ -35,6 +35,7 @@
             <xpath expr="//field[@name='login']" position="after">
                  <label for="allowed_providers" string="Allowed Providers"/>
                     <field name="allowed_providers" widget="many2many_tags"/>
+            <br/>
                  <label for="default_provider" string="Default Provider"/>
                     <field name="default_provider"/>
                   

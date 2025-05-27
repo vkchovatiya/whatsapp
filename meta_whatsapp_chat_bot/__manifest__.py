@@ -12,21 +12,14 @@
     "description": """ 
         """,
     "depends": [
-        "base", 'meta_whatsapp_all_in_one'
-        # "web",
-        # "point_of_sale",
-        # 'sale_management'
-        # ,'account',
+        "base", 'meta_whatsapp_all_in_one','mail' 
     ],
     "data": [
         'security/ir.model.access.csv',
         'views/chatbot_configuration.xml',
-    ],
-    # 'assets': {
-    #     'web.assets_backend': [
-    #             'meta_whatsapp_all_in_one/static/src/css/config.css'
-    #         ],
-    #     },
+        'views/history.xml',
+        'views/res_config_settings.xml',
+    ], 
     "installable": True,
     "auto_install": False,
     "application": True,

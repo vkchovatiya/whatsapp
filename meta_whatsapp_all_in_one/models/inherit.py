@@ -58,6 +58,26 @@ class ResUsers(models.Model):
     )
     odoobot_state = fields.Char(string="WhatsApp Message ID")
     
+    @api.onchange('allowed_providers', 'default_provider')
+    def _onchange_providers(self):
+        """
+        When allowed_providers or default_provider is updated, add this user to the operator_ids
+        of the selected configurations.
+        """
+        for user in self: 
+            for config in user.allowed_providers:
+                if user not in config.operator_ids:
+                    config.operator_ids = [(4, user.id)] 
+            if user.default_provider and user not in user.default_provider.operator_ids:
+                user.default_provider.operator_ids = [(4, user.id)] 
+            if user.allowed_providers:
+                configs_to_remove = self.env['whatsapp.config'].search([
+                    ('operator_ids', 'in', [user.id]),
+                    ('id', 'not in', user.allowed_providers.ids)
+                ])
+                for config in configs_to_remove:
+                    config.operator_ids = [(3, user.id)]
+
 class MailMessage(models.Model):
     _inherit = 'mail.message'
 

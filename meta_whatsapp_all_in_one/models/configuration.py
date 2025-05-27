@@ -86,6 +86,23 @@ class WhatsAppConfig(models.Model):
     business_email = fields.Char(string="Business Email", readonly=True, help="Contact email address of the business")
     business_websites = fields.Char(string="Business Websites", readonly=True,)
 
+
+
+    @api.onchange('operator_ids')
+    def _onchange_operator_ids(self):
+        """
+        When operator_ids is updated, add this config to the allowed_providers of the selected users.
+        If a user has no default_provider, set it to this config.
+        """
+        for config in self:
+            if config.operator_ids:
+                for user in config.operator_ids: 
+                    if config not in user.allowed_providers:
+                        user.allowed_providers = [(4, config.id)] 
+                    if not user.default_provider:
+                        user.default_provider = config
+
+    
     @api.depends('name')
     def _compute_webhook_url(self):
         """Compute the webhook URL based on Odoo's base URL and provider ID."""

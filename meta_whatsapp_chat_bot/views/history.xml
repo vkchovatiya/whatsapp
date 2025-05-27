@@ -1,0 +1,15 @@
+<odoo>
+    <record id="view_chatbot_configuration_inherited" model="ir.ui.view">
+        <field name="name">whatsapp.message.history.inherited</field>
+        <field name="model">whatsapp.message.history</field>
+        <field name="inherit_id" ref="meta_whatsapp_all_in_one.view_whatsapp_message_history_form"/>
+        <field name="arch" type="xml">
+              <xpath expr="//group" position="inside">
+               <group string="Chatbot Details">
+                            <field name="chatbot_id"/>
+                            <field name="current_script_id"/>
+                        </group>
+            </xpath>
+        </field>
+    </record> 
+</odoo>
