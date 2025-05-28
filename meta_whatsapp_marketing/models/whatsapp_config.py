@@ -268,18 +268,6 @@ class WhatsAppMarketingCampaign(models.Model):
                 _logger.warning("Skipping recipient %s: no phone number", recipient_name)
                 continue
 
-            message_history.create({
-                'campaign_id': self.id,
-                'partner_id': partner_id,
-                'number': number,
-                'user': self.env.user.id,
-                'date': fields.Datetime.now(),
-                'message': self.message_preview,
-                'config_id': self.config_id.id,
-                'template_id': self.template_id.id,
-                'status': 'in_queue',
-            })
-
         self.write({
             'state': 'in_queue',
         })
