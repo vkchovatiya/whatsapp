@@ -111,6 +111,19 @@ class WhatsAppMarketingCampaign(models.Model):
     #             except Exception:
     #                 raise ValidationError(_("The filter domain is not valid for the selected recipients model."))
 
+    def action_schedule(self):
+        """Open wizard to schedule the campaign."""
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _('Schedule Campaign'),
+            'res_model': 'whatsapp.campaign.schedule.wizard',
+            'view_mode': 'form',
+            'view_id': self.env.ref('meta_whatsapp_marketing.view_whatsapp_campaign_schedule_wizard_form').id,
+            'target': 'new',
+            'context': {'default_campaign_id': self.id},
+        }
+
     @api.depends('message_history_ids')
     def _compute_statistics(self):
         """Compute percentages based on message history statuses."""
@@ -282,20 +295,20 @@ class WhatsAppMarketingCampaign(models.Model):
             }
         }
 
-    def action_schedule(self):
-        """Schedule the campaign."""
-        self.ensure_one()
-        self.write({'state': 'scheduled'})
-        return {
-            'type': 'ir.actions.client',
-            'tag': 'display_notification',
-            'params': {
-                'title': _('Success'),
-                'message': _('Campaign scheduled successfully!'),
-                'type': 'success',
-                'sticky': False,
-            }
-        }
+    # def action_schedule(self):
+    #     """Schedule the campaign."""
+    #     self.ensure_one()
+    #     self.write({'state': 'scheduled'})
+    #     return {
+    #         'type': 'ir.actions.client',
+    #         'tag': 'display_notification',
+    #         'params': {
+    #             'title': _('Success'),
+    #             'message': _('Campaign scheduled successfully!'),
+    #             'type': 'success',
+    #             'sticky': False,
+    #         }
+    #     }
 
     def action_cancel(self):
         """Cancel the campaign."""
@@ -333,14 +346,38 @@ class WhatsAppMarketingCampaign(models.Model):
             }
         }
 
+    # def _cron_send_queued_campaigns(self):
+    #     """Send messages for queued campaigns ready to be processed."""
+    #     now = fields.Datetime.now()
+    #     campaigns = self.env['whatsapp.marketing.campaign'].search([
+    #         ('state', '=', 'in_queue')
+    #     ])
+    #     for campaign in campaigns:
+    #         try:
+    #             campaign._send_campaign_messages()
+    #             campaign.write({'state': 'sent', 'scheduled_date': False})
+    #             _logger.info("Campaign %s sent successfully", campaign.name)
+    #         except Exception as e:
+    #             _logger.error("Failed to send campaign %s: %s", campaign.name, str(e))
+    #             campaign.write({'state': 'draft', 'scheduled_date': False})
+    #             campaign.message_post(body=_('Failed to send campaign: %s' % str(e)))
+
     def _cron_send_queued_campaigns(self):
-        """Send messages for queued campaigns ready to be processed."""
+        """Send messages for queued or scheduled campaigns ready to be processed."""
         now = fields.Datetime.now()
         campaigns = self.env['whatsapp.marketing.campaign'].search([
-            ('state', '=', 'in_queue')
+            '|',
+            ('state', '=', 'in_queue'),
+            ('state', '=', 'scheduled'),
+            '|',
+            ('scheduled_date', '=', False),
+            ('scheduled_date', '<=', now),
         ])
         for campaign in campaigns:
             try:
+                if campaign.state == 'scheduled':
+                    # Move to in_queue and create message history
+                    campaign.action_send_now()
                 campaign._send_campaign_messages()
                 campaign.write({'state': 'sent', 'scheduled_date': False})
                 _logger.info("Campaign %s sent successfully", campaign.name)
@@ -348,6 +385,7 @@ class WhatsAppMarketingCampaign(models.Model):
                 _logger.error("Failed to send campaign %s: %s", campaign.name, str(e))
                 campaign.write({'state': 'draft', 'scheduled_date': False})
                 campaign.message_post(body=_('Failed to send campaign: %s' % str(e)))
+
 
     def _send_campaign_messages(self):
         """Send template-based messages to recipients using the Meta WhatsApp API."""
@@ -465,3 +503,49 @@ class WhatsAppMarketingCampaign(models.Model):
                     'status': 'failed',
                     'error': str(e),
                 })
+
+class WhatsAppCampaignScheduleWizard(models.TransientModel):
+    _name = 'whatsapp.campaign.schedule.wizard'
+    _description = 'Wizard to Schedule WhatsApp Campaign'
+
+    campaign_id = fields.Many2one(
+        'whatsapp.marketing.campaign',
+        string="Campaign",
+        required=True,
+        default=lambda self: self.env.context.get('default_campaign_id')
+    )
+    scheduled_date = fields.Datetime(
+        string="Schedule Date",
+        required=True,
+        default=lambda self: fields.Datetime.now() + timedelta(hours=1),
+        help="Select the date and time to send the campaign."
+    )
+
+    @api.constrains('scheduled_date')
+    def _check_scheduled_date(self):
+        """Ensure the scheduled date is in the future."""
+        now = fields.Datetime.now()
+        for wizard in self:
+            if wizard.scheduled_date <= now:
+                raise ValidationError(_('The scheduled date must be in the future.'))
+
+    def action_confirm_schedule(self):
+        """Confirm the scheduling and update the campaign."""
+        self.ensure_one()
+        if not self.campaign_id:
+            raise UserError(_('No campaign selected.'))
+        self.campaign_id.write({
+            'state': 'scheduled',
+            'scheduled_date': self.scheduled_date,
+        })
+        _logger.info("Campaign %s scheduled for %s", self.campaign_id.name, self.scheduled_date)
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': _('Success'),
+                'message': _('Campaign scheduled for %s.' % self.scheduled_date),
+                'type': 'success',
+                'sticky': False,
+            }
+        }
