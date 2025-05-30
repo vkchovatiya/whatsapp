@@ -86,8 +86,7 @@ class WhatsAppConfig(models.Model):
     business_email = fields.Char(string="Business Email", readonly=True, help="Contact email address of the business")
     business_websites = fields.Char(string="Business Websites", readonly=True,)
 
-
-
+    
     @api.onchange('operator_ids')
     def _onchange_operator_ids(self):
         """

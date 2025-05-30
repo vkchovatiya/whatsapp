@@ -357,7 +357,7 @@ class WhatsAppWebhook(http.Controller):
         """
         received_normalize = request.env['res.partner'].sudo().normalize_phone_number(phone_number)
         _logger.info(received_normalize)
-         
+        # Use raw SQL query to search for a partner where mobile or phone matches the phone_number
         request.env.cr.execute("""
             SELECT id
             FROM res_partner
@@ -365,7 +365,7 @@ class WhatsAppWebhook(http.Controller):
             LIMIT 1
         """, (received_normalize, received_normalize))
 
-        
+        # Fetch the result
         partner_id = request.env.cr.fetchone()
         partner = None
 

@@ -58,13 +58,7 @@
                                         <field name="location_address" invisible="context.get('type') != 'HEADER' or context.get('format') != 'LOCATION' or context.get('template_id.category') == 'AUTHENTICATION'"/>
                                         <field name="add_security_recommendation" invisible="context.get('type') != 'BODY' or context.get('template_id.category') != 'AUTHENTICATION'"/>
                                         <field name="code_expiration_minutes" invisible="context.get('type') != 'FOOTER' or context.get('template_id.category') != 'AUTHENTICATION'"/>
-                                        <field name="parameter_ids" widget="one2many" context="{'default_component_id': id}" invisible="context.get('type') == 'BODY' and context.get('template_id.category') == 'AUTHENTICATION'">
-                                            <list>
-                                                <field name="name"/>
-                                                <field name="example"/>
-                                                <field name="fieldd"  />
-                                            </list>
-                                        </field>
+                                       
                                         <field name="button_ids" widget="one2many" invisible="context.get('type') != 'BUTTONS'">
                                             <list>
                                                 <field name="type"/>
@@ -94,7 +88,6 @@
                                     <list>
                                         <field name="parameter_name"/>
                                         <field name="field_id" />
-                                        <field name="position"/>
                                     </list>
                                 </field>
                             </group>

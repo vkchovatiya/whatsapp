@@ -151,10 +151,7 @@ class WhatsAppTemplate(models.Model):
                     comp_data['format'] = component.format
                     if component.format == 'TEXT' and component.text:
                         comp_data['text'] = component.text
-                        if component.parameter_ids:
-                            comp_data['example'] = {
-                                'header_text': [param.example for param in component.parameter_ids if param.example]
-                            }
+                         
                     elif component.format in ['IMAGE', 'VIDEO', 'DOCUMENT'] and component.media_file:
                         media_id = self._upload_media(component)
                         comp_data['example'] = {'header_handle': [media_id]}
@@ -170,16 +167,7 @@ class WhatsAppTemplate(models.Model):
                         comp_data['text'] = component.text
                     if self.category == 'AUTHENTICATION' and component.add_security_recommendation:
                         comp_data['add_security_recommendation'] = component.add_security_recommendation
-                    if component.parameter_ids and self.category in ['MARKETING', 'UTILITY']:
-                        examples = {}
-                        if self.parameter_format == 'POSITIONAL':
-                            examples['body_text'] = [[param.example for param in component.parameter_ids if param.example]]
-                        else:
-                            examples['body_text_named_params'] = [
-                                {'param_name': param.name, 'example': param.example}
-                                for param in component.parameter_ids if param.example
-                            ]
-                        comp_data['example'] = examples
+                   
                 elif component.type == 'FOOTER':
                     if component.text:
                         comp_data['text'] = component.text
@@ -277,10 +265,7 @@ class WhatsAppTemplate(models.Model):
                     comp_data['format'] = component.format
                     if component.format == 'TEXT' and component.text:
                         comp_data['text'] = component.text
-                        if component.parameter_ids:
-                            comp_data['example'] = {
-                                'header_text': [param.example for param in component.parameter_ids if param.example]
-                            }
+                         
                     elif component.format in ['IMAGE', 'VIDEO', 'DOCUMENT'] and component.media_file:
                         media_id = self._upload_media(component)
                         comp_data['example'] = {'header_handle': [media_id]}
@@ -296,16 +281,7 @@ class WhatsAppTemplate(models.Model):
                         comp_data['text'] = component.text
                     if self.category == 'AUTHENTICATION' and component.add_security_recommendation:
                         comp_data['add_security_recommendation'] = component.add_security_recommendation
-                    if component.parameter_ids and self.category in ['MARKETING', 'UTILITY']:
-                        examples = {}
-                        if self.parameter_format == 'POSITIONAL':
-                            examples['body_text'] = [[param.example for param in component.parameter_ids if param.example]]
-                        else:
-                            examples['body_text_named_params'] = [
-                                {'param_name': param.name, 'example': param.example}
-                                for param in component.parameter_ids if param.example
-                            ]
-                        comp_data['example'] = examples
+                     
                 elif component.type == 'FOOTER':
                     if component.text:
                         comp_data['text'] = component.text
@@ -529,12 +505,6 @@ class WhatsAppTemplateComponent(models.Model):
         string="Buttons",
         help="Button configurations for BUTTONS component"
     )
-    parameter_ids = fields.One2many(
-        'whatsapp.template.component.parameter',
-        'component_id',
-        string="Parameters",
-        help="Parameters for HEADER or BODY components (e.g., {{1}}, {{sale_start_date}})"
-    )
 
     @api.constrains('format', 'type', 'text', 'media_file', 'location_latitude', 'location_longitude', 'add_security_recommendation')
     def _check_component_format(self):
@@ -552,7 +522,7 @@ class WhatsAppTemplateComponent(models.Model):
             elif component.type == 'HEADER' and component.template_id.category == 'AUTHENTICATION':
                 raise UserError(_('HEADER components are not allowed for AUTHENTICATION templates.'))
             elif component.type == 'BODY':
-                if component.template_id.category in ['MARKETING', 'UTILITY'] and not component.text and not component.parameter_ids:
+                if component.template_id.category in ['MARKETING', 'UTILITY'] and not component.text:
                     raise UserError(_('Text or parameters are required for BODY components in MARKETING or UTILITY templates.'))
                 
             elif component.type == 'FOOTER' and component.template_id.category == 'AUTHENTICATION' and not component.code_expiration_minutes:
@@ -687,36 +657,10 @@ class WhatsAppTemplateComponentButtonApp(models.Model):
             ]):
                 raise UserError(_('Each platform can only be specified once per button.'))
 
-class WhatsAppTemplateComponentParameter(models.Model):
-    _name = 'whatsapp.template.component.parameter'
-    _description = 'WhatsApp Template Component Parameter'
-
-    component_id = fields.Many2one(
-        'whatsapp.template.component',
-        string="Component",
-        required=True,
-        ondelete='cascade',
-        help="The component this parameter belongs to"
-    )
-    name = fields.Char(
-        string="Parameter Name",
-        required=True,
-        help="Name of the parameter (e.g., 1 for {{1}}, sale_start_date for {{sale_start_date}})"
-    )
-    example = fields.Char(
-        string="Example Value",
-        help="Example value for the parameter"
-    )
-    fieldd = fields.Many2one(
-        'ir.model.fields',
-        string="Field",
-        ondelete='cascade',
-        help="Model field to auto-fill this parameter"
-    )
-
 class WhatsAppTemplateParameterMapping(models.Model):
     _name = 'whatsapp.template.parameter.mapping'
     _description = 'WhatsApp Template Parameter Mapping'
+  
 
     template_id = fields.Many2one(
         'whatsapp.template',
@@ -735,23 +679,18 @@ class WhatsAppTemplateParameterMapping(models.Model):
         string="Field", 
         required=True,
         ondelete='cascade',
-        help="Model field to auto-fill this parameter"
-    )
-    position = fields.Integer(
-        string="Position",
-        required=True,
-        help="Position of the parameter in the template (e.g., 1 for {{1}})"
+        help="Model field to auto-fill this parameter",
     )
 
-    @api.constrains('parameter_name', 'position', 'template_id')
+    @api.constrains('parameter_name', 'template_id')
     def _check_unique_mapping(self):
         for record in self:
             domain = [
                 ('template_id', '=', record.template_id.id),
                 ('id', '!=', record.id),
-                '|',
-                ('parameter_name', '=', record.parameter_name),
-                ('position', '=', record.position),
+                ('parameter_name', '=', record.parameter_name), 
             ]
             if self.search_count(domain):
-                raise UserError(_('Parameter name and position must be unique per template.'))
+                raise UserError(_('Parameter name must be unique per template.'))
+
+   
