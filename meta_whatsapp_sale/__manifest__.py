@@ -17,6 +17,8 @@
         'security/ir.model.access.csv',
         'views/sale_order_views.xml',
         'views/whatsapp_sale_wizard_views.xml',
+        'views/whatsapp_template_sale_views.xml',
+        'views/custom_sale_report.xml',
     ],
     'installable': True,
     'auto_install': False,

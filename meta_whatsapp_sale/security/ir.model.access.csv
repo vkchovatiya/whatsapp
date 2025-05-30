@@ -1,3 +1,4 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
 access_sale_order,access_sale_order,model_sale_order,,1,1,1,1
 access_whatsapp_sale_wizard,access_whatsapp_sale_wizard,model_whatsapp_sale_wizard,,1,1,1,1
+access_whatsapp_template,access_whatsapp_template,model_whatsapp_template,,1,1,1,1
