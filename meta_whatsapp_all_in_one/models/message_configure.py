@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 import base64
-from odoo.exceptions import UserError 
+from odoo.exceptions import UserError
 import requests
 from odoo import models, fields, api
-from odoo.tools import _  # Explicitly import _ from odoo.tools to avoid conflicts
+from odoo.tools import _
 import logging
+
 _logger = logging.getLogger(__name__)
+
 
 class MessageConfiguration(models.TransientModel):
     _name = 'message.configuration'
@@ -16,10 +18,10 @@ class MessageConfiguration(models.TransientModel):
         string="Recipient",
         required=True,
     )
-     
+
     model = fields.Many2one(
         'ir.model',
-        string="Model", 
+        string="Model",
     )
     message = fields.Text(
         string="Message",
@@ -35,7 +37,7 @@ class MessageConfiguration(models.TransientModel):
     allowed_config_ids = fields.Many2many(
         'whatsapp.config',
         string="Allowed Configurations",
-        compute="_compute_allowed_config_ids",
+        compute="compute_allowed_config_ids",
     )
     number = fields.Selection(
         [('phone', 'Phone'), ('mobile', 'Mobile')],
@@ -60,7 +62,7 @@ class MessageConfiguration(models.TransientModel):
     )
 
     @api.depends('config_id')
-    def _compute_allowed_config_ids(self):
+    def compute_allowed_config_ids(self):
         for record in self:
             record.allowed_config_ids = record.env.user.allowed_providers
 
@@ -94,7 +96,7 @@ class MessageConfiguration(models.TransientModel):
         return res
 
     @api.onchange('config_id')
-    def _onchange_config_id(self):
+    def onchange_config_id(self):
         self.template_id = False
         return {
             'domain': {
@@ -104,14 +106,14 @@ class MessageConfiguration(models.TransientModel):
         }
 
     @api.onchange('template_id')
-    def _onchange_template_id(self):
+    def onchange_template_id(self):
         """
         Populate the message field with the calculated message after replacing template parameters.
         """
         if self.template_id:
             try:
                 # Calculate the message with replaced parameters
-                calculated_message, _ = self._get_calculated_message_and_parameters()
+                calculated_message, _ = self.get_calculated_message_and_parameters()
                 self.message = calculated_message
             except Exception as e:
                 _logger.error("Error calculating message for template %s: %s", self.template_id.name, str(e))
@@ -125,7 +127,7 @@ class MessageConfiguration(models.TransientModel):
         else:
             self.message = False
 
-    def _get_calculated_message_and_parameters(self):
+    def get_calculated_message_and_parameters(self):
         """
         Calculate the message by replacing template parameters with field values and return the components for the API.
         Returns a tuple of (calculated_message, components).
@@ -136,7 +138,7 @@ class MessageConfiguration(models.TransientModel):
         # Validate that the template is applicable to the current model
         if self.template_id.available and self.template_id.available.id != self.model.id:
             raise UserError(
-                _('Template %s is not applicable to model %s. It applies to %s.') % 
+                _('Template %s is not applicable to model %s. It applies to %s.') %
                 (self.template_id.name, self.model.name, self.template_id.available.name)
             )
 
@@ -200,7 +202,7 @@ class MessageConfiguration(models.TransientModel):
 
         return calculated_message, components
 
-    def _validate_media(self, attachment):
+    def validate_media(self, attachment):
         """Validate attachment against WhatsApp's supported media types and size limits."""
         media_types = {
             'audio': {
@@ -223,7 +225,7 @@ class MessageConfiguration(models.TransientModel):
             },
             'sticker': {
                 'mimetypes': ['image/webp'],
-                'size_limit_mb': 0.1,  
+                'size_limit_mb': 0.1,
             },
             'video': {
                 'mimetypes': ['video/mp4', 'video/3gpp'],
@@ -233,7 +235,7 @@ class MessageConfiguration(models.TransientModel):
 
         # Get file data and size
         file_data = base64.b64decode(attachment.datas)
-        file_size_mb = len(file_data) / (1024 * 1024)   
+        file_size_mb = len(file_data) / (1024 * 1024)
         mime_type = attachment.mimetype.lower()
         filename = attachment.name.lower()
 
@@ -251,26 +253,30 @@ class MessageConfiguration(models.TransientModel):
         # Validate size
         if file_size_mb > media_types[media_type]['size_limit_mb']:
             raise UserError(
-                _('File %s exceeds WhatsApp size limit of %sMB for %s media.') % 
+                _('File %s exceeds WhatsApp size limit of %sMB for %s media.') %
                 (attachment.name, media_types[media_type]['size_limit_mb'], media_type)
             )
 
         # Additional validation for specific types
         if media_type == 'audio' and mime_type == 'audio/ogg':
-            _logger.warning("Audio file %s is OGG format. Ensure it uses the opus codec, as base audio/ogg is not supported.", attachment.name)
+            _logger.warning(
+                "Audio file %s is OGG format. Ensure it uses the opus codec, as base audio/ogg is not supported.",
+                attachment.name)
 
-        if media_type == 'video': 
-            _logger.warning("Video file %s must use H.264 video codec and AAC audio codec with a single audio stream or no audio stream.", attachment.name)
+        if media_type == 'video':
+            _logger.warning(
+                "Video file %s must use H.264 video codec and AAC audio codec with a single audio stream or no audio stream.",
+                attachment.name)
 
         return media_type, file_data, mime_type, attachment.name
 
-    def _upload_media(self, attachment):
+    def upload_media(self, attachment):
         """Upload a single media attachment to WhatsApp API and return media_id, media_type, file_data, filename."""
         if not attachment or not attachment.datas:
             return None, None, None, None
 
-        try: 
-            media_type, file_data, mime_type, filename = self._validate_media(attachment)
+        try:
+            media_type, file_data, mime_type, filename = self.validate_media(attachment)
 
             url = f"{self.config_id.api_url}/{self.config_id.instance_id}/media"
             headers = {
@@ -283,7 +289,8 @@ class MessageConfiguration(models.TransientModel):
             }
             response = requests.post(url, headers=headers, files=files)
             if response.status_code != 200:
-                _logger.error("Failed to upload media %s: %s (Status: %s)", filename, response.text, response.status_code)
+                _logger.error("Failed to upload media %s: %s (Status: %s)", filename, response.text,
+                              response.status_code)
                 raise UserError(_('Failed to upload media %s to WhatsApp: %s') % (filename, response.text))
 
             response_data = response.json()
@@ -299,9 +306,9 @@ class MessageConfiguration(models.TransientModel):
             _logger.error("Error uploading media %s: %s", attachment.name, str(e))
             raise UserError(_('Error uploading media %s to WhatsApp: %s') % (attachment.name, str(e)))
 
-    def _delete_media(self, media_id):
+    def delete_media(self, media_id):
         """Delete a media file from WhatsApp API using the media ID."""
-        try: 
+        try:
             phone_number_id = self.config_id.instance_id
             if not phone_number_id:
                 _logger.error("Phone number ID not found in WhatsApp configuration ID %s", self.config_id.id)
@@ -315,23 +322,24 @@ class MessageConfiguration(models.TransientModel):
             if response.status_code == 200:
                 _logger.info("Successfully deleted media ID %s from WhatsApp", media_id)
             else:
-                _logger.error("Failed to delete media ID %s: %s (Status: %s)", media_id, response.text, response.status_code)
+                _logger.error("Failed to delete media ID %s: %s (Status: %s)", media_id, response.text,
+                              response.status_code)
                 raise UserError(_('Failed to delete media ID %s from WhatsApp: %s') % (media_id, response.text))
         except Exception as e:
-            _logger.error("Error deleting media ID %s: %s", media_id, str(e)) 
+            _logger.error("Error deleting media ID %s: %s", media_id, str(e))
             return False
 
     def action_send_message(self):
         self.ensure_one()
         at_least_one_success = False
         any_attempt_made = False
-    
+
         number = self.recipient.phone if self.number == 'phone' else self.recipient.mobile
         if not number:
             raise UserError(_('Recipient phone number is missing.'))
         if number.startswith('+'):
             number = number[1:]
-    
+
         log_vals = {
             'number': number,
             'user': self.env.user.id,
@@ -340,7 +348,7 @@ class MessageConfiguration(models.TransientModel):
             'template_id': self.template_id.id if self.template_id else False,
             'partner_id': self.recipient.id if self.recipient else False,
         }
-    
+
         if not self.config_id or not self.recipient:
             log_vals.update({'status': 'failed'})
             self.env['whatsapp.message.history'].create(log_vals)
@@ -355,23 +363,23 @@ class MessageConfiguration(models.TransientModel):
                     'next': {'type': 'ir.actions.act_window_close'},
                 }
             }
-    
+
         if self.config_id not in self.env.user.allowed_providers:
             raise UserError(_("Selected configuration is not allowed for this user."))
-    
+
         headers = {
             'Authorization': f'Bearer {self.config_id.access_token}',
             'Content-Type': 'application/json',
         }
         url = f"{self.config_id.api_url}/{self.config_id.instance_id}/messages"
-    
-        channel = self._get_or_create_chat_channel(self.recipient, self.config_id.id) 
-    
+
+        channel = self.get_or_create_chat_channel(self.recipient, self.config_id.id)
+
         if self.template_id:
             any_attempt_made = True
-            
-            value, components = self._get_calculated_message_and_parameters()
-            if value :
+
+            value, components = self.get_calculated_message_and_parameters()
+            if value:
                 template_payload = {
                     "messaging_product": "whatsapp",
                     "to": number,
@@ -379,7 +387,7 @@ class MessageConfiguration(models.TransientModel):
                     "type": "text",
                     "text": {
                         "body": value
-                        }
+                    }
                 }
             else:
                 template_payload = {
@@ -399,7 +407,7 @@ class MessageConfiguration(models.TransientModel):
                 response = requests.post(url, headers=headers, json=template_payload)
                 _logger.info("Template message response status: %s", response.status_code)
                 _logger.info("Template message response text: %s", response.text)
-                
+
                 if response.status_code in [200, 201]:
                     response_data = response.json()
                     _logger.info("Template message response data: %s", response_data)
@@ -418,7 +426,8 @@ class MessageConfiguration(models.TransientModel):
                         _logger.error("No messages returned in template response: %s", response_data)
                         raise UserError(_('No message ID returned from WhatsApp API for template message.'))
                 else:
-                    _logger.error("WhatsApp API error for template message: %s (Status: %s)", response.text, response.status_code)
+                    _logger.error("WhatsApp API error for template message: %s (Status: %s)", response.text,
+                                  response.status_code)
                     raise UserError(_('Failed to send template message: %s') % response.text)
             except Exception as e:
                 _logger.error("Error sending template message: %s", str(e))
@@ -435,7 +444,7 @@ class MessageConfiguration(models.TransientModel):
                         'next': {'type': 'ir.actions.act_window_close'},
                     }
                 }
-    
+
         if self.message and not self.template_id:
             any_attempt_made = True
             text_payload = {
@@ -450,7 +459,7 @@ class MessageConfiguration(models.TransientModel):
                 response = requests.post(url, headers=headers, json=text_payload)
                 _logger.info("Text message response status: %s", response.status_code)
                 _logger.info("Text message response text: %s", response.text)
-                
+
                 if response.status_code in [200, 201]:
                     response_data = response.json()
                     _logger.info("Text message response data: %s", response_data)
@@ -475,13 +484,14 @@ class MessageConfiguration(models.TransientModel):
                                 'author_id': self.env.user.partner_id.id,
                                 'date': fields.Datetime.now(),
                                 'whatsapp_message_id': message_id,
-                            }) 
+                            })
                             _logger.info("Text message added to channel ID %s: %s", channel.id, message.id)
                     else:
                         _logger.error("No messages returned in text response: %s", response_data)
                         raise UserError(_('No message ID returned from WhatsApp API for text message.'))
                 else:
-                    _logger.error("WhatsApp API error for text message: %s (Status: %s)", response.text, response.status_code)
+                    _logger.error("WhatsApp API error for text message: %s (Status: %s)", response.text,
+                                  response.status_code)
                     raise UserError(_('Failed to send text message: %s') % response.text)
             except Exception as e:
                 _logger.error("Error sending text message: %s", str(e))
@@ -498,11 +508,11 @@ class MessageConfiguration(models.TransientModel):
                         'next': {'type': 'ir.actions.act_window_close'},
                     }
                 }
-    
+
         if self.attachment_ids:
             for attachment in self.attachment_ids:
                 any_attempt_made = True
-                media_id, media_type, file_data, filename = self._upload_media(attachment)
+                media_id, media_type, file_data, filename = self.upload_media(attachment)
                 if not media_id:
                     continue  # Skip if media upload failed
 
@@ -519,7 +529,7 @@ class MessageConfiguration(models.TransientModel):
                     response = requests.post(url, headers=headers, json=media_payload)
                     _logger.info("Media message response status for %s: %s", filename, response.status_code)
                     _logger.info("Media message response text for %s: %s", filename, response.text)
-                    
+
                     if response.status_code in [200, 201]:
                         response_data = response.json()
                         _logger.info("Media message response data for %s: %s", filename, response_data)
@@ -552,15 +562,18 @@ class MessageConfiguration(models.TransientModel):
                                     'date': fields.Datetime.now(),
                                     'whatsapp_message_id': message_id,
                                     'attachment_ids': [(4, new_attachment.id)],
-                                }) 
-                                _logger.info("Media message with attachment %s added to channel ID %s: %s", filename, channel.id, message.id)
+                                })
+                                _logger.info("Media message with attachment %s added to channel ID %s: %s", filename,
+                                             channel.id, message.id)
                             # Delete the media from WhatsApp after sending
-                            self._delete_media(media_id)
+                            self.delete_media(media_id)
                         else:
                             _logger.error("No messages returned in media response for %s: %s", filename, response_data)
-                            raise UserError(_('No message ID returned from WhatsApp API for media message %s.') % filename)
+                            raise UserError(
+                                _('No message ID returned from WhatsApp API for media message %s.') % filename)
                     else:
-                        _logger.error("WhatsApp API error for media message %s: %s (Status: %s)", filename, response.text, response.status_code)
+                        _logger.error("WhatsApp API error for media message %s: %s (Status: %s)", filename,
+                                      response.text, response.status_code)
                         raise UserError(_('Failed to send media message %s: %s') % (filename, response.text))
                 except Exception as e:
                     _logger.error("Error sending media message for %s: %s", filename, str(e))
@@ -577,7 +590,7 @@ class MessageConfiguration(models.TransientModel):
                             'next': {'type': 'ir.actions.act_window_close'},
                         }
                     }
-    
+
         if not any_attempt_made:
             log_vals.update({'status': 'failed'})
             self.env['whatsapp.message.history'].create(log_vals)
@@ -592,18 +605,18 @@ class MessageConfiguration(models.TransientModel):
                     'next': {'type': 'ir.actions.act_window_close'},
                 }
             }
-    
+
         log_vals.update({
             'status': 'sent' if at_least_one_success else 'failed',
         })
         history_record = self.env['whatsapp.message.history'].sudo().create(log_vals)
-    
+
         notification_type = 'success' if at_least_one_success else 'warning'
         if at_least_one_success:
             notification_message = _('Message sent successfully to %s!') % self.recipient.name
         else:
             notification_message = _('Failed to send message to %s.') % self.recipient.name
-    
+
         return {
             'type': 'ir.actions.client',
             'tag': 'display_notification',
@@ -616,7 +629,7 @@ class MessageConfiguration(models.TransientModel):
             }
         }
 
-    def _get_or_create_chat_channel(self, partner, config_id=False):
+    def get_or_create_chat_channel(self, partner, config_id=False):
         """
         Find or create a group discuss.channel for the given partner and all operators.
         """
@@ -656,8 +669,8 @@ class MessageConfiguration(models.TransientModel):
                     'name': f"WhatsApp Group - {partner.name}",
                     'channel_type': 'group',
                     'channel_member_ids': [
-                        (0, 0, {'partner_id': op_partner.id}) for op_partner in operator_partners
-                    ] + [(0, 0, {'partner_id': partner.id})],
+                                              (0, 0, {'partner_id': op_partner.id}) for op_partner in operator_partners
+                                          ] + [(0, 0, {'partner_id': partner.id})],
                 }
                 if config_id:
                     channel_vals['whatsapp_config_id'] = config_id
@@ -669,11 +682,13 @@ class MessageConfiguration(models.TransientModel):
                 missing_partners = operator_partners - current_member_partners
                 if missing_partners:
                     new_members = [(0, 0, {'partner_id': p.id}) for p in missing_partners]
-                    _logger.debug("Adding missing members to group channel %s: %s", channel.id, missing_partners.mapped('name'))
+                    _logger.debug("Adding missing members to group channel %s: %s", channel.id,
+                                  missing_partners.mapped('name'))
                     channel.write({
                         'channel_member_ids': new_members
                     })
-                    _logger.info("Added missing operators %s to group channel ID %s", missing_partners.mapped('name'), channel.id)
+                    _logger.info("Added missing operators %s to group channel ID %s", missing_partners.mapped('name'),
+                                 channel.id)
 
             _logger.info('Group channel created/found: %s (ID: %d, Members: %s)',
                          channel.name, channel.id, channel.channel_member_ids.mapped('partner_id.name'))
@@ -683,6 +698,7 @@ class MessageConfiguration(models.TransientModel):
                           partner.name, config_id or 'N/A', str(e))
             return False
 
+
 class ResPartner(models.Model):
     _inherit = 'res.partner'
 
@@ -690,14 +706,14 @@ class ResPartner(models.Model):
         """Open the MessageConfiguration wizard to send a WhatsApp message."""
         self.ensure_one()
         model = self.env['ir.model'].search([('model', '=', 'res.partner')])
-        _logger.info('Opening message configuration wizard for partner %s', self.name)  
+        _logger.info('Opening message configuration wizard for partner %s', self.name)
         return {
             'type': 'ir.actions.act_window',
             'name': _('Write Message'),
             'res_model': 'message.configuration',
             'view_mode': 'form',
             'view_id': self.env.ref('meta_whatsapp_all_in_one.view_message_configuration_form').id,
-            'target': 'new',   
+            'target': 'new',
             'context': {
                 'default_recipient': self.id,
                 'default_model': model.id,
