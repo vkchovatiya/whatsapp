@@ -1,4 +1,4 @@
-from odoo import models, fields, api ,_
+from odoo import models, fields, api, _
 from odoo.exceptions import UserError
 import requests
 import string
@@ -7,6 +7,7 @@ import json
 import logging
 
 _logger = logging.getLogger(__name__)
+
 
 class WhatsAppConfig(models.Model):
     _name = "whatsapp.config"
@@ -49,7 +50,7 @@ class WhatsAppConfig(models.Model):
         [
             ('draft', 'Draft'),
             ('verified', 'Verified'),
-            ('error','Error')
+            ('error', 'Error')
 
         ],
         string="Status",
@@ -70,23 +71,23 @@ class WhatsAppConfig(models.Model):
     )
     template_ids = fields.One2many('whatsapp.template', 'config_id', string="Templates")
 
-
     verified_name = fields.Char(string="Verified Name", readonly=True, help="Verified name of the phone number")
-    code_verification_status = fields.Char(string="Code Verification Status", readonly=True, help="Code verification status of the phone number")
+    code_verification_status = fields.Char(string="Code Verification Status", readonly=True,
+                                           help="Code verification status of the phone number")
     display_phone_number = fields.Char(string="Display Phone Number", readonly=True, help="Display phone number")
     quality_rating = fields.Char(string="Quality Rating", readonly=True, help="Quality rating of the phone number")
     platform_type = fields.Char(string="Platform Type", readonly=True, help="Platform type of the phone number")
-    throughput_level = fields.Char(string="Throughput Level", readonly=True, help="Throughput level of the phone number")
+    throughput_level = fields.Char(string="Throughput Level", readonly=True,
+                                   help="Throughput level of the phone number")
     business_messaging_product = fields.Char(string="Messaging Product", readonly=True,
                                              help="Messaging product used (e.g., whatsapp)")
     business_address = fields.Text(string="Business Address", readonly=True, help="Address of the business")
     business_description = fields.Text(string="Business Description", readonly=True, help="Description of the business")
     business_vertical = fields.Char(string="Business Vertical", readonly=True, help="Industry type of the business")
-    business_about = fields.Char(string="Business About", readonly=True,)
+    business_about = fields.Char(string="Business About", readonly=True, )
     business_email = fields.Char(string="Business Email", readonly=True, help="Contact email address of the business")
-    business_websites = fields.Char(string="Business Websites", readonly=True,)
+    business_websites = fields.Char(string="Business Websites", readonly=True, )
 
-    
     @api.onchange('operator_ids')
     def _onchange_operator_ids(self):
         """
@@ -95,13 +96,12 @@ class WhatsAppConfig(models.Model):
         """
         for config in self:
             if config.operator_ids:
-                for user in config.operator_ids: 
+                for user in config.operator_ids:
                     if config not in user.allowed_providers:
-                        user.allowed_providers = [(4, config.id)] 
+                        user.allowed_providers = [(4, config.id)]
                     if not user.default_provider:
                         user.default_provider = config
 
-    
     @api.depends('name')
     def _compute_webhook_url(self):
         """Compute the webhook URL based on Odoo's base URL and provider ID."""
@@ -172,7 +172,7 @@ class WhatsAppConfig(models.Model):
         except Exception as e:
             _logger.error("Error fetching business profile: %s", str(e))
             raise UserError(_('Error fetching business profile: %s') % str(e))
-            
+
     def action_verify_configuration(self):
         """Verify the WhatsApp configuration by making a test API call."""
         self.ensure_one()
@@ -236,15 +236,16 @@ class WhatsAppConfig(models.Model):
             component_model = self.env['whatsapp.template.component']
             button_model = self.env['whatsapp.template.component.button']
             button_app_model = self.env['whatsapp.template.component.button.app']
-            parameter_model = self.env['whatsapp.template.component.parameter']
 
             for template in templates:
                 meta_language = template.get('language')
                 odoo_lang_code = language_mapping.get(meta_language, meta_language.replace('_', '-'))
-                lang = self.env['res.lang'].search([('code', 'in', [odoo_lang_code, odoo_lang_code.replace('-', '_')])], limit=1)
+                lang = self.env['res.lang'].search([('code', 'in', [odoo_lang_code, odoo_lang_code.replace('-', '_')])],
+                                                   limit=1)
 
                 if not lang:
-                    _logger.warning("Language code %s not found in res.lang for template %s", meta_language, template.get('name'))
+                    _logger.warning("Language code %s not found in res.lang for template %s", meta_language,
+                                    template.get('name'))
                     continue
 
                 existing_template = template_model.search([
@@ -258,7 +259,8 @@ class WhatsAppConfig(models.Model):
                     'lang': lang.id,
                     'category': template.get('category'),
                     'status': template.get('status', 'PENDING'),
-                    'parameter_format': 'POSITIONAL' if template.get('category') in ['MARKETING', 'UTILITY'] else 'STRUCTURED',
+                    'parameter_format': 'POSITIONAL' if template.get('category') in ['MARKETING',
+                                                                                     'UTILITY'] else 'STRUCTURED',
                     'config_id': self.id,
                     'add_status': 'added' if template.get('status') else 'new',
                 }
@@ -279,12 +281,18 @@ class WhatsAppConfig(models.Model):
                         'type': comp.get('type'),
                         'format': comp.get('format'),
                         'text': comp.get('text'),
-                        'add_security_recommendation': comp.get('add_security_recommendation', False) if comp.get('type') == 'BODY' else False,
-                        'code_expiration_minutes': comp.get('code_expiration_minutes') if comp.get('type') == 'FOOTER' else False,
-                        'location_latitude': comp.get('latitude') if comp.get('type') == 'HEADER' and comp.get('format') == 'LOCATION' else False,
-                        'location_longitude': comp.get('longitude') if comp.get('type') == 'HEADER' and comp.get('format') == 'LOCATION' else False,
-                        'location_name': comp.get('name') if comp.get('type') == 'HEADER' and comp.get('format') == 'LOCATION' else False,
-                        'location_address': comp.get('address') if comp.get('type') == 'HEADER' and comp.get('format') == 'LOCATION' else False,
+                        'add_security_recommendation': comp.get('add_security_recommendation', False) if comp.get(
+                            'type') == 'BODY' else False,
+                        'code_expiration_minutes': comp.get('code_expiration_minutes') if comp.get(
+                            'type') == 'FOOTER' else False,
+                        'location_latitude': comp.get('latitude') if comp.get('type') == 'HEADER' and comp.get(
+                            'format') == 'LOCATION' else False,
+                        'location_longitude': comp.get('longitude') if comp.get('type') == 'HEADER' and comp.get(
+                            'format') == 'LOCATION' else False,
+                        'location_name': comp.get('name') if comp.get('type') == 'HEADER' and comp.get(
+                            'format') == 'LOCATION' else False,
+                        'location_address': comp.get('address') if comp.get('type') == 'HEADER' and comp.get(
+                            'format') == 'LOCATION' else False,
                     }
                     component = component_model.create(comp_data)
 
@@ -297,7 +305,8 @@ class WhatsAppConfig(models.Model):
                                 'phone_number': btn.get('phone_number'),
                                 'url': btn.get('url'),
                                 'otp_type': btn.get('otp_type') if btn.get('type') == 'OTP' else False,
-                                'autofill_text': btn.get('autofill_text') if btn.get('type') == 'OTP' and btn.get('otp_type') == 'ONE_TAP' else False,
+                                'autofill_text': btn.get('autofill_text') if btn.get('type') == 'OTP' and btn.get(
+                                    'otp_type') == 'ONE_TAP' else False,
                             }
                             button = button_model.create(btn_data)
 
@@ -306,30 +315,13 @@ class WhatsAppConfig(models.Model):
                                     app_data = {
                                         'button_id': button.id,
                                         'platform': app.get('id'),
-                                        'package_name': app.get('package_name') if app.get('id') == 'android' else False,
-                                        'signature_hash': app.get('signature_hash') if app.get('id') == 'android' else False,
+                                        'package_name': app.get('package_name') if app.get(
+                                            'id') == 'android' else False,
+                                        'signature_hash': app.get('signature_hash') if app.get(
+                                            'id') == 'android' else False,
                                         'bundle_id': app.get('bundle_id') if app.get('id') == 'ios' else False,
                                     }
                                     button_app_model.create(app_data)
-
-                    if comp.get('type') in ['HEADER', 'BODY'] and comp.get('example'):
-                        example = comp.get('example', {})
-                        if 'header_text' in example or 'body_text' in example:
-                            param_list = example.get('header_text') or example.get('body_text', [[]])[0]
-                            for i, ex in enumerate(param_list, 1):
-                                parameter_model.create({
-                                    'component_id': component.id,
-                                    'name': str(i),
-                                    'example': ex,
-                                })
-                        elif 'header_text_named_params' in example or 'body_text_named_params' in example:
-                            param_list = example.get('header_text_named_params') or example.get('body_text_named_params', [])
-                            for param in param_list:
-                                parameter_model.create({
-                                    'component_id': component.id,
-                                    'name': param.get('param_name'),
-                                    'example': param.get('example'),
-                                })
 
             return {
                 'type': 'ir.actions.client',
