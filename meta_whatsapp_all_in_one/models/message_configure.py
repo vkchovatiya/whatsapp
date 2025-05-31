@@ -522,7 +522,8 @@ class MessageConfiguration(models.TransientModel):
                     "type": media_type,
                     media_type: {
                         "id": media_id,
-                        "caption": self.message if self.message else ""
+                        "caption": self.message if self.message else "",
+                        "filename": attachment.display_name
                     }
                 }
                 try:
