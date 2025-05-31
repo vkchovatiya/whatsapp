@@ -194,17 +194,32 @@ class WhatsAppSaleWizard(models.TransientModel):
 
     @api.depends('template_id', 'sale_order_id')
     def _compute_message(self):
-        """Populate message from template, replacing placeholders."""
+        """Compute the message field by reusing the logic from MessageConfiguration."""
         for wizard in self:
-            if wizard.template_id and wizard.sale_order_id:
-                # Replace placeholders (e.g., {{partner_name}}, {{order_name}})
-                message = wizard.template_id.message
-                message = message.replace('{{partner_name}}', wizard.partner_id.name or '')
-                message = message.replace('{{order_name}}', wizard.sale_order_id.name or '')
-                message = message.replace('{{amount_total}}', str(wizard.sale_order_id.amount_total) or '')
-                wizard.message = message
-            else:
+            if not wizard.template_id or not wizard.sale_order_id:
                 wizard.message = False
+                continue
+
+            # Get the ir.model record for sale.order
+            sale_order_model = self.env['ir.model'].search([('model', '=', 'sale.order')], limit=1)
+            if not sale_order_model:
+                raise UserError(_('Model "sale.order" not found in the system.'))
+
+            # Create a temporary MessageConfiguration record to reuse its method
+            message_config = self.env['message.configuration'].new({
+                'template_id': wizard.template_id.id,
+                'model': sale_order_model.id,
+                'number_field': wizard.sale_order_id.id,
+            })
+
+            try:
+                # Call the get_calculated_message_and_parameters method
+                calculated_message, _ = message_config.get_calculated_message_and_parameters()
+                wizard.message = calculated_message
+            except Exception as e:
+                _logger.error("Error calculating message for template %s in WhatsAppSaleWizard: %s",
+                              wizard.template_id.name, str(e))
+                wizard.message = wizard.template_id.message  # Fallback to raw message if calculation fails
 
     @api.constrains('phone')
     def _check_phone(self):
@@ -214,8 +229,10 @@ class WhatsAppSaleWizard(models.TransientModel):
                 raise ValidationError(_('Please provide a valid phone number.'))
 
     def action_send_message(self):
-        """Send WhatsApp message with template and attachments."""
+        """Send WhatsApp message by reusing the logic from MessageConfiguration."""
         self.ensure_one()
+
+        # Validate required fields
         if not self.config_id or not (self.template_id or self.message):
             raise UserError(_('Please select a WhatsApp provider and a template or enter a message.'))
 
@@ -224,169 +241,24 @@ class WhatsAppSaleWizard(models.TransientModel):
         if not phone.isdigit():
             raise UserError(_('Invalid phone number format.'))
 
-        # Prepare API request
-        headers = {
-            'Authorization': f'Bearer {self.config_id.access_token}',
-            'Content-Type': 'application/json',
-        }
-        url = f"{self.config_id.api_url}/{self.config_id.instance_id}/messages"
-        message_history = self.env['whatsapp.message.history']
+        # Update the partner’s phone number if needed
+        if self.partner_id.phone != self.phone:
+            self.partner_id.write({'phone': self.phone})
 
+        # Create a temporary MessageConfiguration record to reuse its method
+        message_config = self.env['message.configuration'].new({
+            'recipient': self.partner_id.id,
+            'config_id': self.config_id.id,
+            'number': 'phone',  # Use the 'phone' field of res.partner
+            'template_id': self.template_id.id if self.template_id else False,
+            'message': self.message if self.message else False,
+            'attachment_ids': [(6, 0, self.attachment_ids.ids)] if self.attachment_ids else False,
+        })
+
+        # Call the action_send_message method from MessageConfiguration
         try:
-            # Send template-based message if template_id is set
-            if self.template_id:
-                payload = {
-                    "messaging_product": "whatsapp",
-                    "to": phone,
-                    "type": "template",
-                    "template": {
-                        "name": self.template_id.name,
-                        "language": {
-                            "code": self.template_id.lang.code.replace('-', '_')
-                        },
-                        "components": []
-                    }
-                }
-                response = requests.post(url, headers=headers, json=payload)
-                _logger.info('WhatsApp template API response for %s: %s', phone, response.text)
-                response.raise_for_status()
-                response_data = response.json()
-                message_id = response_data.get('messages', [{}])[0].get('id')
-                conversation_id = response_data.get('conversations', [{}])[0].get('id', False)
-
-                # Log template message
-                history_vals = {
-                    'campaign_id': False,
-                    'partner_id': self.partner_id.id,
-                    'number': phone,
-                    'user': self.env.user.id,
-                    'date': fields.Datetime.now(),
-                    'message': self.message,
-                    'config_id': self.config_id.id,
-                    'template_id': self.template_id.id,
-                    'status': 'sent',
-                    'message_id': message_id,
-                    'conversation_id': conversation_id,
-                    # 'sale_order_id': self.sale_order_id.id,
-                }
-                message_history.create(history_vals)
-
-            # Send text message if no template
-            else:
-                payload = {
-                    "messaging_product": "whatsapp",
-                    "to": phone,
-                    "type": "text",
-                    "text": {
-                        "body": self.message
-                    }
-                }
-                response = requests.post(url, headers=headers, json=payload)
-                _logger.info('WhatsApp text API response for %s: %s', phone, response.text)
-                response.raise_for_status()
-                response_data = response.json()
-                message_id = response_data.get('messages', [{}])[0].get('id')
-                conversation_id = response_data.get('conversations', [{}])[0].get('id', False)
-
-                # Log text message
-                history_vals = {
-                    'campaign_id': False,
-                    'partner_id': self.partner_id.id,
-                    'number': phone,
-                    'user': self.env.user.id,
-                    'date': fields.Datetime.now(),
-                    'message': self.message,
-                    'config_id': self.config_id.id,
-                    'template_id': False,
-                    'status': 'sent',
-                    'message_id': message_id,
-                    'conversation_id': conversation_id,
-                    # 'sale_order_id': self.sale_order_id.id,
-                }
-                message_history.create(history_vals)
-
-            # Send attachments
-            for attachment in self.attachment_ids:
-                mime_type = attachment.mimetype
-                file_data = base64.b64decode(attachment.datas)
-                # Determine media type
-                media_type = 'document'
-                if mime_type.startswith('image'):
-                    media_type = 'image'
-                elif mime_type.startswith('video'):
-                    media_type = 'video'
-                elif mime_type.startswith('audio'):
-                    media_type = 'audio'
-
-                # Upload media to WhatsApp
-                upload_url = f"{self.config_id.api_url}/{self.config_id.instance_id}/media"
-                files = {'file': (attachment.name, file_data, mime_type)}
-                upload_response = requests.post(upload_url, headers={'Authorization': f'Bearer {self.config_id.access_token}'}, files=files)
-                _logger.info('WhatsApp media upload response for %s: %s', attachment.name, upload_response.text)
-                upload_response.raise_for_status()
-                media_id = upload_response.json().get('id')
-
-                # Send media message
-                media_payload = {
-                    "messaging_product": "whatsapp",
-                    "to": phone,
-                    "type": media_type,
-                    media_type: {
-                        "id": media_id
-                    }
-                }
-                if media_type == 'document':
-                    media_payload[media_type]['filename'] = attachment.name
-
-                media_response = requests.post(url, headers=headers, json=media_payload)
-                _logger.info('WhatsApp media API response for %s: %s', phone, media_response.text)
-                media_response.raise_for_status()
-                media_response_data = media_response.json()
-                media_message_id = media_response_data.get('messages', [{}])[0].get('id')
-
-                # Log media message
-                history_vals = {
-                    'campaign_id': False,
-                    'partner_id': self.partner_id.id,
-                    'number': phone,
-                    'user': self.env.user.id,
-                    'date': fields.Datetime.now(),
-                    'message': f"Sent attachment: {attachment.name}",
-                    'config_id': self.config_id.id,
-                    'template_id': False,
-                    'status': 'sent',
-                    'message_id': media_message_id,
-                    'conversation_id': conversation_id,
-                    # 'sale_order_id': self.sale_order_id.id,
-                    'attachment_id': attachment.id,
-                }
-                message_history.create(history_vals)
-
-        except requests.RequestException as e:
-            _logger.error("Failed to send WhatsApp message to %s: %s", phone, str(e))
-            history_vals = {
-                'campaign_id': False,
-                'partner_id': self.partner_id.id,
-                'number': phone,
-                'user': self.env.user.id,
-                'date': fields.Datetime.now(),
-                'message': self.message or 'Attachment sending failed',
-                'config_id': self.config_id.id,
-                'template_id': self.template_id.id if self.template_id else False,
-                'status': 'failed',
-                'error': str(e),
-                # 'sale_order_id': self.sale_order_id.id,
-            }
-            message_history.create(history_vals)
+            result = message_config.action_send_message()
+            return result
+        except Exception as e:
+            _logger.error("Failed to send WhatsApp message to %s: %s", self.partner_id.name, str(e))
             raise UserError(_('Failed to send message: %s') % str(e))
-
-        return {
-            'type': 'ir.actions.client',
-            'tag': 'display_notification',
-            'params': {
-                'title': _('Success'),
-                'message': _('Message sent successfully to %s.') % self.partner_id.name,
-                'type': 'success',
-                'sticky': False,
-            }
-        }
