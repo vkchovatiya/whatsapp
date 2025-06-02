@@ -1,0 +1,54 @@
+<odoo>
+    <!-- Recreate the external layout report -->
+    <record id="web_external_layout" model="ir.actions.report">
+        <field name="name">External Layout</field>
+        <field name="model">ir.ui.view</field>
+        <field name="report_type">qweb-html</field>
+        <field name="report_name">web.external_layout</field>
+    </record>
+
+    <!-- Custom Report Action -->
+    <record id="action_report_custom_purchaseorder" model="ir.actions.report">
+        <field name="name">Custom Purchase Order PDF</field>
+        <field name="model">purchase.order</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">meta_whatsapp_purchase.report_custom_purchaseorder</field>
+        <field name="print_report_name">'Purchase Order - %s' % (object.name)</field>
+    </record>
+
+    <!-- Custom Report Template -->
+    <template id="report_custom_purchaseorder">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="doc">
+                <t t-call="web.external_layout">
+                    <div class="page">
+                        <h2>Purchase Order: <span t-field="doc.name"/></h2>
+                        <p>Vendor: <span t-field="doc.partner_id.name"/></p>
+                        <p>Order Date: <span t-field="doc.date_approve"/></p>
+                        <p>Buyer: <span t-field="doc.user_id.name"/></p>
+                        <p>Total: <span t-field="doc.amount_total"/></p>
+                        <h3>Order Lines</h3>
+                        <table class="table table-condensed">
+                            <thead>
+                                <tr>
+                                    <th>Product</th>
+                                    <th>Quantity Ordered</th>
+                                    <th>Unit Price</th>
+                                    <th>Subtotal</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr t-foreach="doc.order_line" t-as="line">
+                                    <td><span t-field="line.product_id.name"/></td>
+                                    <td><span t-field="line.product_qty"/></td>
+                                    <td><span t-field="line.price_unit"/></td>
+                                    <td><span t-field="line.price_subtotal"/></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+</odoo>

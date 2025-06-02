@@ -174,7 +174,7 @@ class WhatsAppSaleWizard(models.TransientModel):
                     if len(pdf_content) > 100 * 1024 * 1024:
                         raise UserError(_('The generated PDF exceeds WhatsApp\'s 100MB file size limit.'))
                     attachment = self.env['ir.attachment'].create({
-                        'name': f"{sale_order.name}_{report_type}.pdf",
+                        'name': f"{sale_order.name}_sale_order.pdf",
                         'type': 'binary',
                         'datas': base64.b64encode(pdf_content),
                         'mimetype': 'application/pdf',

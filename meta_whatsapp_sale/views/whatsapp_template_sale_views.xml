@@ -5,17 +5,11 @@
         <field name="name">WhatsApp Templates (Sales)</field>
         <field name="res_model">whatsapp.template</field>
         <field name="view_mode">list,form</field>
-<!--        <field name="domain">[('sale_specific', '=', True)]</field>-->
-<!--        <field name="context">{'default_sale_specific': True, 'default_available': 'sale.order'}</field>-->
-<!--        <field name="view_id" ref="meta_whatsapp_all_in_one.view_whatsapp_template_list"/>-->
-<!--        <field name="search_view_id" ref="meta_whatsapp_all_in_one.view_whatsapp_template_form"/>-->
     </record>
 
-    <!-- Menu Item under Sales -->
     <menuitem
         id="menu_whatsapp_template_sale"
         name="WhatsApp Templates"
-
         action="action_whatsapp_template_sale"
         sequence="20"/>
 </odoo>
