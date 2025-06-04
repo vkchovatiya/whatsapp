@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+    <t t-name="meta_whatsapp_pos.WhatsAppMessagePopup">
+        <Dialog title="props.title">
+            <div class="form-group">
+                <label>Phone Number</label>
+                <input
+                    type="text"
+                    t-model="state.phone"
+                    t-ref="phone"
+                    class="form-control"
+                    placeholder="Enter phone number"
+                />
+            </div>
+            <div class="form-group">
+                <label>Template</label>
+                <select t-model="state.template_id" t-on-change="onTemplateChange" class="form-control">
+                    <option value="">Select a Template</option>
+                    <t t-foreach="state.templates" t-as="template" t-key="template.id">
+                        <option t-att-value="template.id" t-esc="template.name"/>
+                    </t>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Message</label>
+                <textarea
+                    t-model="state.message"
+                    t-ref="message"
+                    class="form-control"
+                    rows="5"
+                    placeholder="Enter your message"
+                />
+            </div>
+            <div class="form-group">
+                <label>Attachments</label>
+                <input
+                    type="file"
+                    multiple="multiple"
+                    t-ref="attachments"
+                    t-on-change="onFileChange"
+                    class="form-control"
+                />
+                <t t-if="state.attachment_ids.length">
+                    <ul>
+                        <t t-foreach="state.attachment_ids" t-as="attachment_id" t-key="attachment_id">
+                            <li>
+                                Attachment ID: <t t-esc="attachment_id"/>
+                                <button t-on-click="() => removeAttachment(attachment_id)" class="btn btn-sm btn-danger">Remove</button>
+                            </li>
+                        </t>
+                    </ul>
+                </t>
+            </div>
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" t-model="state.attach_pdf" t-on-change="onAttachPdfChange"/>
+                    Attach PDF
+                </label>
+            </div>
+            <div class="form-group" t-if="state.attach_pdf">
+                <label>Report Type</label>
+                <select t-model="state.report_type" t-on-change="onReportTypeChange" class="form-control">
+                    <option value="standard">Standard POS Order Report</option>
+                    <option value="custom">Custom POS Order Report</option>
+                </select>
+            </div>
+            <t t-set-slot="footer">
+                <button class="btn btn-secondary" t-on-click="close">Cancel</button>
+                <button class="btn btn-primary" t-on-click="send">Send</button>
+            </t>
+        </Dialog>
+    </t>
+</templates>

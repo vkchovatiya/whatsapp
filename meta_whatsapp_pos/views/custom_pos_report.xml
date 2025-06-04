@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <data>
+        <!-- Custom Report Action -->
+        <record id="action_report_custom_pos_order" model="ir.actions.report">
+            <field name="name">Custom POS Order PDF</field>
+            <field name="model">pos.order</field>
+            <field name="report_type">qweb-pdf</field>
+            <field name="report_name">meta_whatsapp_pos.report_custom_pos_order</field>
+            <field name="print_report_name">'POS Order - %s' % (object.name)</field>
+        </record>
+
+        <!-- Define the QWeb template for the report -->
+        <template id="report_custom_pos_order">
+            <t t-call="web.html_container">
+                <t t-foreach="docs" t-as="order">
+                    <t t-call="web.basic_layout">
+                        <div class="page">
+                            <h1>POS Order: <t t-esc="order.name"/></h1>
+                            <p><strong>Customer:</strong> <t t-esc="order.partner_id.name or 'N/A'"/></p>
+                            <p><strong>Date:</strong> <t t-esc="order.date_order"/></p>
+                            <p><strong>Total Amount:</strong> <t t-esc="order.amount_total"/> <t t-esc="order.currency_id.name"/></p>
+                            <h3>Order Lines</h3>
+                            <table class="table table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th>Product</th>
+                                        <th>Quantity</th>
+                                        <th>Unit Price</th>
+                                        <th>Subtotal</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <t t-foreach="order.lines" t-as="line">
+                                        <tr>
+                                            <td><t t-esc="line.product_id.name"/></td>
+                                            <td><t t-esc="line.qty"/></td>
+                                            <td><t t-esc="line.price_unit"/></td>
+                                            <td><t t-esc="line.price_subtotal"/></td>
+                                        </tr>
+                                    </t>
+                                </tbody>
+                            </table>
+                        </div>
+                    </t>
+                </t>
+            </t>
+        </template>
+    </data>
+</odoo>
