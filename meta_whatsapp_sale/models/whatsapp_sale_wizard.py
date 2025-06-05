@@ -74,62 +74,6 @@ class WhatsAppSaleWizard(models.TransientModel):
         help="Select the type of report to attach as a PDF."
     )
 
-    # @api.model
-    # def default_get(self, fields_list):
-    #     """Override default_get to optionally attach a PDF or include sale report data in the message."""
-    #     res = super(WhatsAppSaleWizard, self).default_get(fields_list)
-    #     sale_order_id = res.get('sale_order_id')
-    #     attach_pdf = res.get('attach_pdf', False)
-    #     if sale_order_id:
-    #         sale_order = self.env['sale.order'].browse(sale_order_id)
-    #         # Fetch sale report data
-    #         sale_report = self.env['sale.report'].search([('order_reference', '=', f'sale.order,{sale_order.id}')],
-    #                                                      limit=1)
-    #         if sale_report:
-    #             report_summary = (
-    #                 f"Sale Order: {sale_order.name}\n"
-    #                 f"Customer: {sale_order.partner_id.name}\n"
-    #                 f"Order Date: {sale_order.date_order}\n"
-    #                 f"Total Quantity: {sale_report.product_uom_qty}\n"
-    #                 f"Total Amount: {sale_report.price_total}\n"
-    #                 f"Salesperson: {sale_report.user_id.name}\n"
-    #                 f"Sales Team: {sale_report.team_id.name}"
-    #             )
-    #             if not res.get('message'):
-    #                 res['message'] = report_summary
-    #         if attach_pdf:
-    #             try:
-    #                 report_type = res.get('report_type', 'custom')
-    #                 user = self.env.user
-    #                 if report_type == 'pro_forma':
-    #                     if not user.has_group('sale.group_proforma_sales'):
-    #                         raise UserError(_('You do not have permission to use the PRO-FORMA report.'))
-    #                     report_xml_id = 'sale.action_report_pro_forma_invoice'
-    #                 elif report_type == 'standard':
-    #                     report_xml_id = 'sale.action_report_saleorder'
-    #                 else:
-    #                     report_xml_id = 'meta_whatsapp_sale.action_report_custom_saleorder'
-    #                 report = self.env.ref(report_xml_id)
-    #                 pdf_content, _ = report._render_qweb_pdf(sale_order.id)
-    #                 if len(pdf_content) > 100 * 1024 * 1024:
-    #                     raise UserError(_('The generated PDF exceeds WhatsApp\'s 100MB file size limit.'))
-    #                 attachment = self.env['ir.attachment'].create({
-    #                     'name': f"{sale_order.name}_{report_type}.pdf",
-    #                     'type': 'binary',
-    #                     'datas': base64.b64encode(pdf_content),
-    #                     'mimetype': 'application/pdf',
-    #                     'res_model': 'sale.order',
-    #                     'res_id': sale_order.id,
-    #                 })
-    #                 res['attachment_ids'] = [(4, attachment.id)]
-    #             except MissingError:
-    #                 raise UserError(
-    #                     _('The report (%s) is missing. Please ensure the report is available in the system.') % report_xml_id
-    #                 )
-    #             except Exception as e:
-    #                 raise UserError(_('Failed to generate the sale order PDF: %s') % str(e))
-    #     return res
-
     @api.model
     def default_get(self, fields_list):
         """Override default_get to optionally attach a PDF or include sale report data in the message."""

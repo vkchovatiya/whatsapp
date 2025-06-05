@@ -12,7 +12,7 @@
         - Log message history.
     """,
     'author': '',
-    'depends': ['sale_management', 'meta_whatsapp_marketing', 'mail','meta_whatsapp_all_in_one'],
+    'depends': ['sale_management','meta_whatsapp_all_in_one'],
     'data': [
         'security/ir.model.access.csv',
         'views/sale_order_views.xml',
