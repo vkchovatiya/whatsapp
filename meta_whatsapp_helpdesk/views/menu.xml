@@ -1,0 +1,14 @@
+<odoo>
+    <!-- Action for WhatsApp Templates in Helpdesk -->
+    <record id="action_whatsapp_template_helpdesk" model="ir.actions.act_window">
+        <field name="name">WhatsApp Templates (Helpdesk)</field>
+        <field name="res_model">whatsapp.template</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <menuitem
+        id="menu_whatsapp_template_helpdesk"
+        name="WhatsApp Templates"
+        action="action_whatsapp_template_helpdesk"
+        sequence="20"/>
+</odoo>
