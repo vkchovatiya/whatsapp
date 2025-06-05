@@ -111,15 +111,21 @@ class PosOrder(models.Model):
         try:
             result = message_config.action_send_message()
             # Log the message in whatsapp.message.history
-            self.env['whatsapp.message.history'].create({
+            attachment_record = self.env['ir.attachment'].browse(
+                final_attachment_ids[0]) if final_attachment_ids else None
 
-                'partner_id': self.partner_id.id,
-                'config_id': config_id.id,
-                'message': message,
+            # Search for existing message history record
+            history = self.env['whatsapp.message.history'].search([
+                ('partner_id', '=', self.partner_id.id),
+                ('message', '=', message)
+            ], limit=1)
 
-                'template_id': template_id,
+            if history and attachment_record:
+                history.write({
+                    'attachment': attachment_record.datas,
+                    'attachment_filename': attachment_record.name,
+                })
 
-            })
             return {'success': True, 'message': _("WhatsApp message sent successfully.")}
         except Exception as e:
             _logger.error(f"Failed to send WhatsApp message for POS order {self.name}: {str(e)}")
