@@ -191,6 +191,21 @@ class WhatsAppInventoryWizard(models.TransientModel):
         # Call the action_send_message method from MessageConfiguration
         try:
             result = message_config.action_send_message()
+            attachment_record = self.attachment_ids[0] if self.attachment_ids else None
+
+            if attachment_record:
+                # Get all matching history records for this partner and message
+                histories = self.env['whatsapp.message.history'].search([
+                    ('partner_id', '=', self.partner_id.id),
+                    ('message', '=', self.message)
+                ], order='create_date desc')  # Sort to get the latest first
+
+                if histories:
+                    latest_history = histories[0]  # Get the most recent one
+                    latest_history.write({
+                        'attachment': attachment_record.datas,
+                        'attachment_filename': attachment_record.name,
+                    })
             return result
         except Exception as e:
             _logger.error("Failed to send WhatsApp message to %s: %s", self.partner_id.name, str(e))
