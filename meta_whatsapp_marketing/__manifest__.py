@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Part of Creyox Technologies.
+
 {
     'name': 'WhatsApp Marketing',
     'version': '18.0',

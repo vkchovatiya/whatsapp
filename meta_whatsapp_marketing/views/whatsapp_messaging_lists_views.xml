@@ -23,7 +23,7 @@
                         <field name="partner_ids" widget="many2many_tags" invisible="lists_selected_model == 'whatsapp.messaging.lists.contacts'"/>
                     </group>
                     <group>
-                        <field name="lists_selected_model"/>
+                        <field name="lists_selected_model" invisible="1"/>
                     </group>
                 </sheet>
             </form>

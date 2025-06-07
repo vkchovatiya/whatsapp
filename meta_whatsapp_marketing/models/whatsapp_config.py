@@ -547,5 +547,9 @@ class WhatsAppCampaignScheduleWizard(models.TransientModel):
                 'message': _('Campaign scheduled for %s.' % self.scheduled_date),
                 'type': 'success',
                 'sticky': False,
+                "next": {
+                            "type": "ir.actions.client",
+                            "tag": "reload",
+                        },
             }
         }
